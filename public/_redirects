@@ -1,0 +1,2 @@
+/moonshot/*  https://api.moonshot.cn/:splat  200
+/deepseek/*  https://api.deepseek.com/:splat  200

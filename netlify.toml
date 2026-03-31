@@ -1,0 +1,13 @@
+[build]
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/moonshot/*"
+  to = "/.netlify/functions/moonshot/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/deepseek/*"
+  to = "/.netlify/functions/deepseek/:splat"
+  status = 200

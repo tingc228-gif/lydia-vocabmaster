@@ -1,0 +1,5 @@
+{
+  "name": "VocabMaster",
+  "description": "An AI-powered vocabulary learning app with 5 interactive modules: Flashcards, Context Matching, Sentence Fill, Spelling, and Reading Comprehension.",
+  "requestFramePermissions": []
+}

@@ -45,18 +45,18 @@ export default function FlashcardsModule({ data }: { data: LearningData }) {
           <div className="progress-value" style={{ width: `${((currentIndex + 1) / data.words.length) * 100}%` }} />
         </div>
 
-        <div className="mt-8 space-y-4 text-white">
+        <div className="mt-8 space-y-4">
           <div className="studio-panel">
             <p className="eyebrow">Word</p>
-            <h3 className="text-3xl font-semibold text-white">{displayWord}</h3>
+            <h3 className="text-3xl font-semibold text-[#b3477d]">{displayWord}</h3>
           </div>
           <div className="studio-panel">
             <p className="eyebrow">Part of speech</p>
-            <p className="text-xl font-semibold text-[#f9e7b0]">{word.partOfSpeech}</p>
+            <p className="text-xl font-semibold text-[#d28a43]">{word.partOfSpeech}</p>
           </div>
           <div className="studio-panel">
             <p className="eyebrow">Hint</p>
-            <p className="text-sm leading-7 text-white/78">Try guessing the meaning before you flip the card.</p>
+            <p className="text-sm leading-7 text-[#ad7093]">Try guessing the meaning before you flip the card.</p>
           </div>
         </div>
       </aside>
@@ -67,18 +67,18 @@ export default function FlashcardsModule({ data }: { data: LearningData }) {
             <article className="flashcard-face flashcard-front studio-card">
               <div className="flex items-start justify-between gap-4">
                 <span className="module-pill">Front</span>
-                <span className="text-sm font-semibold text-slate-500">Tap to flip</span>
+                <span className="text-sm font-semibold text-[#b4849f]">Tap to flip</span>
               </div>
 
               <div>
                 <p className="eyebrow">Vocabulary</p>
-                <h2 className="flashcard-word">{displayWord}</h2>
+                <h2 className="flashcard-word text-[#b3477d]">{displayWord}</h2>
               </div>
 
               <div className="flex items-end justify-between gap-4">
                 <div>
                   <p className="eyebrow">Part of speech</p>
-                  <p className="text-xl font-semibold">{word.partOfSpeech}</p>
+                  <p className="text-xl font-semibold text-[#d28a43]">{word.partOfSpeech}</p>
                 </div>
                 <div className="module-pill">
                   <RotateCcw size={14} />
@@ -89,23 +89,23 @@ export default function FlashcardsModule({ data }: { data: LearningData }) {
 
             <article className="flashcard-face flashcard-back studio-card">
               <div className="flex items-start justify-between gap-4">
-                <span className="module-pill bg-white/10 text-white">Back</span>
-                <span className="text-sm font-semibold text-white/70">Meaning + example</span>
+                <span className="module-pill">Back</span>
+                <span className="text-sm font-semibold text-[#b4849f]">Meaning + example</span>
               </div>
 
               <div className="space-y-5">
                 <div>
-                  <p className="eyebrow text-white/70">Definition</p>
-                  <h3 className="exercise-prompt">{displayDefinition}</h3>
+                  <p className="eyebrow">Definition</p>
+                  <h3 className="exercise-prompt text-[#b3477d]">{displayDefinition}</h3>
                 </div>
-                <div className="h-px bg-white/15" />
+                <div className="h-px bg-[#f6c7de]" />
                 <div>
-                  <p className="eyebrow text-white/70">Example</p>
-                  <p className="text-xl leading-8 text-white/88">"{word.exampleSentence}"</p>
+                  <p className="eyebrow">Example</p>
+                  <p className="text-xl leading-8 text-[#9f658c]">"{word.exampleSentence}"</p>
                 </div>
               </div>
 
-              <div className="text-sm font-semibold text-white/72">Say the meaning out loud if you can.</div>
+              <div className="text-sm font-semibold text-[#b07a99]">Say the meaning out loud if you can.</div>
             </article>
           </div>
         </div>

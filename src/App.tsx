@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import {
   BookOpen,
   CheckSquare,
+  Cloud,
   Edit3,
   FileText,
   Layers,
@@ -95,12 +96,12 @@ export default function App() {
   };
 
   const tabs = [
-    { id: 'input' as const, icon: Settings, label: 'Setup', accent: 'Make a study set' },
-    { id: 'flashcards' as const, icon: Layers, label: 'Cards', accent: 'Quick review' },
-    { id: 'spelling' as const, icon: Type, label: 'Spelling', accent: 'Type it right' },
-    { id: 'context' as const, icon: CheckSquare, label: 'Matching', accent: 'Flip and match' },
-    { id: 'sentence' as const, icon: Edit3, label: 'Sentence Fill', accent: 'Use the word' },
-    { id: 'reading' as const, icon: FileText, label: 'Reading Lab', accent: 'Star activity' },
+    { id: 'input' as const, icon: Settings, label: 'Setup', accent: 'Pick your words' },
+    { id: 'flashcards' as const, icon: Layers, label: 'Cards', accent: 'Flip and smile' },
+    { id: 'spelling' as const, icon: Type, label: 'Spelling', accent: 'Type the word' },
+    { id: 'context' as const, icon: CheckSquare, label: 'Matching', accent: 'Find the pair' },
+    { id: 'sentence' as const, icon: Edit3, label: 'Synonym Game', accent: 'Tap a match' },
+    { id: 'reading' as const, icon: FileText, label: 'Story Time', accent: 'Read and play' },
   ];
 
   const activeTabInfo = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
@@ -120,29 +121,46 @@ export default function App() {
 
       <div className="app-frame">
         <header className="top-ribbon">
-          <div className="brand-row">
-            <div className="brand-lockup">
-              <div className="brand-mark">
-                <BookOpen size={24} />
-              </div>
-              <div>
-                <p className="eyebrow">Sparkly Word World</p>
-                <h1>VocabMaster</h1>
-              </div>
+          <div className="storybook-hero">
+            <div className="storybook-float storybook-cloud">
+              <Cloud size={18} />
+              Dreamy play
+            </div>
+            <div className="storybook-float storybook-stars">
+              <Stars size={16} />
+              Magic words
             </div>
 
-            <div className="stats-grid">
-              {stats.map((stat) => (
-                <div key={stat.label} className="stat-card">
-                  <span>{stat.label}</span>
-                  <strong>{stat.value}</strong>
+            <div className="storybook-side storybook-left">
+              <span className="storybook-emoji" aria-hidden="true">🦄</span>
+              <span className="storybook-emoji" aria-hidden="true">✨</span>
+            </div>
+
+            <div className="storybook-title">
+              <div className="brand-lockup storybook-brand">
+                <div className="brand-mark">
+                  <BookOpen size={24} />
                 </div>
-              ))}
+                <div>
+                  <p className="storybook-overline">Little Word Garden</p>
+                  <h2>VocabMaster</h2>
+                </div>
+              </div>
+              <p>A cozy playland for cards, spelling, matching, and story fun.</p>
             </div>
-          </div>
 
-          <div className="nav-row">
-            <nav className="tab-list" aria-label="Learning modules">
+            <div className="storybook-side storybook-right">
+              <div className="stats-grid storybook-stats">
+                {stats.map((stat) => (
+                  <div key={stat.label} className="stat-card">
+                    <span>{stat.label}</span>
+                    <strong>{stat.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <nav className="tab-list storybook-tabs" aria-label="Learning modules">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const disabled = !learningData && tab.id !== 'input';
@@ -174,7 +192,7 @@ export default function App() {
         <main className={`content-shell ${activeTab === 'reading' ? 'is-reading-focus' : ''}`}>
           <section className="content-topbar">
             <div>
-              <p className="eyebrow">Current activity</p>
+              <p className="eyebrow">Now playing</p>
               <h2>{activeTabInfo.label}</h2>
             </div>
 
@@ -194,12 +212,12 @@ export default function App() {
               {activeTab === 'reading' && (
                 <div className="reading-badge">
                   <Stars size={16} />
-                  Featured today
+                  Story sparkles
                 </div>
               )}
               <div className="status-pill">
                 <span className={`status-dot ${learningData ? 'is-live' : ''}`} />
-                {learningData ? 'Study set ready' : 'Start with setup'}
+                {learningData ? 'Ready to play' : 'Start with setup'}
               </div>
             </div>
           </section>

@@ -432,8 +432,8 @@ export default function SentenceFillModule({
                 disabled={isResolving && !isSelected}
                 className={`choice-card relative flex min-h-[138px] items-center justify-center overflow-hidden rounded-[28px] border px-5 py-5 text-center shadow-[0_12px_24px_rgba(8,7,28,0.28)] transition-all duration-300 ${
                   isSelected
-                    ? 'border-[#ffd36c]/50 bg-[linear-gradient(135deg,rgba(255,211,108,0.22),rgba(159,142,240,0.22))] text-white scale-[1.02]'
-                    : 'border-white/14 bg-[linear-gradient(135deg,rgba(255,255,255,0.18),rgba(159,142,240,0.18))] text-white hover:scale-[1.02]'
+                    ? 'border-[#ffd36c]/55 bg-[linear-gradient(135deg,rgba(255,211,108,0.28),rgba(159,142,240,0.22))] text-[#9a3568] scale-[1.02]'
+                    : 'border-[#efd8ec] bg-[linear-gradient(135deg,rgba(255,255,255,0.9),rgba(233,228,255,0.9))] text-[#9a3568] hover:scale-[1.02]'
                 } ${isVanishing ? 'scale-110 opacity-0 blur-[2px]' : ''}`}
                 style={{
                   fontSize: 'clamp(1.35rem, 1.75vw, 2.05rem)',
@@ -444,7 +444,7 @@ export default function SentenceFillModule({
               >
                 <span
                   className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.16em] ${
-                    card.kind === 'word' ? 'bg-[#ffd36c]/18 text-[#ffe59c]' : 'bg-[#9bc9ff]/16 text-[#d8e8ff]'
+                    card.kind === 'word' ? 'bg-[#fff1c7] text-[#d28a43]' : 'bg-[#dff0ff] text-[#7b90c8]'
                   }`}
                 >
                   {card.kind}

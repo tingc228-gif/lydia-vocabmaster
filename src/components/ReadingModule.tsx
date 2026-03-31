@@ -78,7 +78,7 @@ export default function ReadingModule({
                 <div className="mt-4">
                   <label className="field-label">
                     <ChevronRight size={16} />
-                    文章数量 (Story count)
+                    Story count
                   </label>
                   <input
                     type="number"
@@ -89,8 +89,8 @@ export default function ReadingModule({
                     className="studio-input"
                   />
                   <p className="muted-copy mt-2 text-sm">
-                    每篇文章约 {Math.max(1, Math.floor(data.words.length / Math.max(1, storyCount)))} 个填空
-                    （共 {data.words.length} 个单词 ÷ {storyCount} 篇文章）
+                    About {Math.max(1, Math.floor(data.words.length / Math.max(1, storyCount)))} blanks per story
+                    ({data.words.length} words total divided across {storyCount} stories)
                   </p>
                 </div>
                 <button
@@ -242,7 +242,7 @@ export default function ReadingModule({
               <div className="mt-4">
                 <label className="field-label">
                   <ChevronRight size={16} />
-                  文章数量 (Story count)
+                  Story count
                 </label>
                 <input
                   type="number"
@@ -253,8 +253,8 @@ export default function ReadingModule({
                   className="studio-input"
                 />
                 <p className="muted-copy mt-2 text-sm">
-                  每篇文章约 {Math.max(1, Math.floor(data.words.length / Math.max(1, storyCount)))} 个填空
-                  （共 {data.words.length} 个单词 ÷ {storyCount} 篇文章）
+                  About {Math.max(1, Math.floor(data.words.length / Math.max(1, storyCount)))} blanks per story
+                  ({data.words.length} words total divided across {storyCount} stories)
                 </p>
               </div>
               <button

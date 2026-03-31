@@ -243,6 +243,60 @@ function replaceWordWithBlank(sentence: string, answer: string, blankId: string)
   return `${sentence.trim()} [${blankId}]`;
 }
 
+function buildFallbackExample(word: string, definition: string, partOfSpeech: string): string {
+  const cleanWord = word.trim();
+  const cleanDef = definition.trim().replace(/[.]+$/g, '');
+  const pos = partOfSpeech.toLowerCase();
+
+  if (!cleanWord) return 'No example available.';
+
+  // Build a simple but honest sentence: "Word means definition."
+  // This is better than a grammatically broken template.
+  if (cleanDef && cleanDef.length > 3 && !cleanDef.toLowerCase().includes('unavailable')) {
+    // For phrasal verbs / multi-word expressions, use "To X means ..."
+    if (isPhrasalVerb(cleanWord) || /\bverb\b/.test(pos) || /\bv\b/.test(pos)) {
+      return `To ${cleanWord} means to ${cleanDef.replace(/^to\s+/i, '').toLowerCase()}.`;
+    }
+    // For adjectives: "Something that is X is definition."
+    if (/\badj\b/.test(pos)) {
+      return `If something is ${cleanWord}, it is ${cleanDef.toLowerCase()}.`;
+    }
+    // For adverbs: "To do something X means definition."
+    if (/\badv\b/.test(pos)) {
+      return `To do something ${cleanWord} means to do it ${cleanDef.replace(/^in a .+ way$/i, '').toLowerCase()}.`;
+    }
+    // For nouns
+    if (/\bnoun\b/.test(pos) || /\bn\b/.test(pos)) {
+      const article = /^[aeiou]/i.test(cleanWord) ? 'An' : 'A';
+      return `${article} ${cleanWord} is ${cleanDef.toLowerCase()}.`;
+    }
+    // Generic fallback with definition
+    return `The word "${cleanWord}" means ${cleanDef.toLowerCase()}.`;
+  }
+
+  return `The word "${cleanWord}" is one of the vocabulary words in this set.`;
+}
+
+function ensurePlayableExample(word: string, definition: string, partOfSpeech: string, maybeExample: string): string {
+  const trimmed = maybeExample.trim();
+  if (!trimmed) {
+    return buildFallbackExample(word, definition, partOfSpeech);
+  }
+
+  const normalized = trimmed.toLowerCase();
+  if (
+    normalized.includes('appears in this study set') ||
+    normalized.includes('during the class story') ||
+    normalized.includes('in the story') && normalized.includes(' means ') ||
+    normalized.includes('means ') ||
+    normalized.includes('used ${')
+  ) {
+    return buildFallbackExample(word, definition, partOfSpeech);
+  }
+
+  return trimmed;
+}
+
 function looksLikeDefinitionDrill(text: string): boolean {
   const compact = text.trim().toLowerCase();
   if (!compact) return true;
@@ -473,10 +527,11 @@ ${articlePrompt}`,
       },
     ],
     response_format: { type: "json_object" },
+    max_tokens: 8192,
   });
 
   const content = extractJsonObject(response.choices[0].message.content || "{}");
-  const parsed = JSON.parse(content) as {
+  let parsed: {
     articles?: Array<{
       index?: number;
       text?: string;
@@ -484,6 +539,17 @@ ${articlePrompt}`,
       distractors?: string[];
     }>;
   };
+
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    const repaired = content.replace(/,?\s*$/, '') + ']}';
+    try {
+      parsed = JSON.parse(repaired);
+    } catch {
+      return data.articles;
+    }
+  }
 
   const repairedMap = new Map<number, LearningData["articles"][number]>();
 
@@ -635,10 +701,11 @@ ${articleSpecs}`,
       },
     ],
     response_format: { type: "json_object" },
+    max_tokens: 8192,
   });
 
   const content = extractJsonObject(response.choices[0].message.content || "{}");
-  const parsed = JSON.parse(content) as {
+  let parsed: {
     articles?: Array<{
       index?: number;
       text?: string;
@@ -646,6 +713,19 @@ ${articleSpecs}`,
       distractors?: string[];
     }>;
   };
+
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    // Try to repair truncated JSON by closing open brackets
+    const repaired = content.replace(/,?\s*$/, '') + ']}';
+    try {
+      parsed = JSON.parse(repaired);
+    } catch {
+      console.error('Story JSON could not be repaired, using fallback articles.');
+      return fallbackArticles;
+    }
+  }
 
   const articleMap = new Map<number, LearningData["articles"][number]>();
   for (const item of parsed.articles || []) {
@@ -696,9 +776,23 @@ function normalizeLearningData(input: any, requestedWords: ParsedWordInput[], ar
             fallbackSynonym(cleanedWord, String(word?.definition ?? '').trim() || hintedDefinition || ''),
           partOfSpeech: String(word?.partOfSpeech ?? '').trim() || 'word',
           definition: String(word?.definition ?? '').trim() || hintedDefinition || 'Definition unavailable.',
-          exampleSentence: String(word?.exampleSentence ?? '').trim() || `The word ${cleanedWord} appears in this study set.`,
+          exampleSentence: ensurePlayableExample(
+            cleanedWord,
+            String(word?.definition ?? '').trim() || hintedDefinition || 'Definition unavailable.',
+            String(word?.partOfSpeech ?? '').trim() || 'word',
+            String(word?.exampleSentence ?? '').trim(),
+          ),
           exampleSentenceWithBlank:
-            String(word?.exampleSentenceWithBlank ?? '').trim() || 'The word ___ appears in this study set.',
+            replaceWordWithBlank(
+              ensurePlayableExample(
+                cleanedWord,
+                String(word?.definition ?? '').trim() || hintedDefinition || 'Definition unavailable.',
+                String(word?.partOfSpeech ?? '').trim() || 'word',
+                String(word?.exampleSentence ?? '').trim(),
+              ),
+              cleanedWord,
+              '___',
+            ),
         };
       })
       .filter((word: { word: string }) => word.word.length > 0);
@@ -716,8 +810,20 @@ function normalizeLearningData(input: any, requestedWords: ParsedWordInput[], ar
       synonym: fallbackSynonym(requestedWord.word, requestedWord.providedDefinition || ''),
       partOfSpeech: 'word',
       definition: requestedWord.providedDefinition || `${requestedWord.word} is one of the target vocabulary words.`,
-      exampleSentence: `The word ${requestedWord.word} appears in this study set.`,
-      exampleSentenceWithBlank: `The word ___ appears in this study set.`,
+      exampleSentence: buildFallbackExample(
+        requestedWord.word,
+        requestedWord.providedDefinition || `${requestedWord.word} is one of the target vocabulary words.`,
+        'word',
+      ),
+      exampleSentenceWithBlank: replaceWordWithBlank(
+        buildFallbackExample(
+          requestedWord.word,
+          requestedWord.providedDefinition || `${requestedWord.word} is one of the target vocabulary words.`,
+          'word',
+        ),
+        requestedWord.word,
+        '___',
+      ),
     };
   });
 
@@ -758,7 +864,7 @@ function normalizeLearningData(input: any, requestedWords: ParsedWordInput[], ar
 async function repairMalformedJson(
   openai: OpenAI,
   malformedContent: string,
-  model: string = "deepseek-chat",
+  model: string = "moonshot-v1-128k",
 ): Promise<LearningData> {
   const repairResponse = await openai.chat.completions.create({
     model,
@@ -785,7 +891,7 @@ async function repairSynonyms(
   words: Array<{ word: string; definition: string; synonym: string }>,
 ): Promise<Record<string, string>> {
   const response = await openai.chat.completions.create({
-    model: "deepseek-chat",
+    model: "moonshot-v1-128k",
     messages: [
       {
         role: "system",
@@ -794,8 +900,36 @@ async function repairSynonyms(
       },
       {
         role: "user",
-        content: `Return JSON in this exact shape: {"items":[{"word":"...","synonym":"..."}]}\n\nRules:\n- Do not copy the definition.\n- Do not append words like "match" or "alike".\n- If the word is a phrasal verb, give a natural equivalent such as "appear" for "turn up" when that meaning fits.\n- Use one word when possible, at most two words.\n\nWords to repair:\n${words
-          .map((item) => `word=${item.word}; current synonym=${item.synonym}; definition=${item.definition}`)
+        content: `Return JSON in this exact shape: {"items":[{"word":"...","synonym":"..."}]}
+
+Rules:
+- Each synonym must be a REAL, common English word that a 10-year-old would know.
+- The synonym must have the SAME meaning as the original word.
+- Use exactly one word when possible, at most two words.
+- Do NOT copy the definition.
+- Do NOT invent words or use obscure/rare words.
+- Do NOT append words like "match", "alike", "related".
+- If the word is a phrasal verb, give a natural single-word equivalent (e.g., "turn up" → "appear", "call on" → "visit", "give in" → "surrender").
+- If the word is an adjective, the synonym must also be an adjective.
+- If the word is a verb, the synonym must also be a verb.
+
+Examples of GOOD synonyms:
+- brave → courageous
+- happy → joyful
+- walk → stroll
+- big → large
+- scared → afraid
+- quickly → fast
+- stubborn → obstinate
+
+Examples of BAD synonyms (never do this):
+- brave → "showing courage" (this is a definition, not a synonym)
+- happy → "happymatch" (invented word)
+- walk → "movement" (wrong part of speech)
+
+Words to repair:
+${words
+          .map((item) => `word=${item.word}; partOfSpeech=guess from definition; definition=${item.definition}`)
           .join('\n')}`,
       },
     ],
@@ -808,7 +942,15 @@ async function repairSynonyms(
   return Object.fromEntries(
     (parsed.items || [])
       .map((item) => [String(item.word || '').trim().toLowerCase(), String(item.synonym || '').trim()])
-      .filter(([word, synonym]) => word && synonym),
+      .filter(([word, synonym]) => word && synonym)
+      .filter(([, synonym]) => {
+        // Reject synonyms that are clearly bad
+        if (synonym.split(/\s+/).length > 3) return false;
+        if (/[.:;!?]/.test(synonym)) return false;
+        if (synonym.length > 25) return false;
+        if (/match$|alike$|related$/i.test(synonym)) return false;
+        return true;
+      }),
   );
 }
 
@@ -867,6 +1009,78 @@ async function ensureCoherentArticles(openai: OpenAI, data: LearningData, articl
   }
 }
 
+function isBadExample(sentence: string, word: string): boolean {
+  const s = sentence.toLowerCase();
+  return (
+    !sentence.trim() ||
+    s.includes('means to') ||
+    s.includes('means ') ||
+    s.includes('is one of the vocabulary') ||
+    s.includes('appears in this study set') ||
+    s.includes('if something is ' + word.toLowerCase()) ||
+    s.includes('the word "' + word.toLowerCase() + '"')
+  );
+}
+
+async function repairMissingExamples(openai: OpenAI, data: LearningData): Promise<LearningData> {
+  const badWords = data.words.filter((w) => isBadExample(w.exampleSentence, w.word));
+  if (badWords.length === 0) return data;
+
+  const wordSpecs = badWords
+    .map((w) => `word=${w.word}; partOfSpeech=${w.partOfSpeech}; definition=${w.definition}`)
+    .join('\n');
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "moonshot-v1-128k",
+      messages: [
+        {
+          role: "system",
+          content: "You generate natural English example sentences for vocabulary words. Return strictly valid JSON only.",
+        },
+        {
+          role: "user",
+          content: `Generate one natural example sentence for each word below. Each sentence must show the word used correctly in a real-life situation. Do NOT write definitions or meta-sentences.
+
+Return JSON: {"examples":[{"word":"...","exampleSentence":"...","exampleSentenceWithBlank":"..."}]}
+
+${wordSpecs}`,
+        },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 8192,
+    });
+
+    const content = extractJsonObject(response.choices[0].message.content || "{}");
+    const parsed = JSON.parse(content) as {
+      examples?: Array<{ word?: string; exampleSentence?: string; exampleSentenceWithBlank?: string }>;
+    };
+
+    const exampleMap = new Map<string, { sentence: string; blank: string }>();
+    for (const item of parsed.examples || []) {
+      const w = String(item.word || '').trim().toLowerCase();
+      const s = String(item.exampleSentence || '').trim();
+      const b = String(item.exampleSentenceWithBlank || '').trim();
+      if (w && s && !isBadExample(s, item.word || '')) {
+        exampleMap.set(w, { sentence: s, blank: b || replaceWordWithBlank(s, item.word || '', '___') });
+      }
+    }
+
+    return {
+      ...data,
+      words: data.words.map((w) => {
+        const repair = exampleMap.get(w.word.toLowerCase());
+        if (repair && isBadExample(w.exampleSentence, w.word)) {
+          return { ...w, exampleSentence: repair.sentence, exampleSentenceWithBlank: repair.blank };
+        }
+        return w;
+      }),
+    };
+  } catch {
+    return data;
+  }
+}
+
 export async function generateMaterials(apiKey: string, words: string): Promise<LearningData> {
   const openai = createMoonshotClient(apiKey);
 
@@ -894,26 +1108,43 @@ export async function generateMaterials(apiKey: string, words: string): Promise<
     ]
   }
 
+  CRITICAL RULES FOR EXAMPLE SENTENCES:
+  - Every example sentence MUST be unique. Do NOT reuse sentence templates or patterns across different words.
+  - Each sentence must show the word used naturally in a real-life situation a child can picture.
+  - The word must be used grammatically correctly in the sentence.
+  - Do NOT write meta-sentences like "X became the perfect word for that moment" or "The word X describes how...".
+  - Do NOT write template sentences like "When the gate opened, the children began to X toward the path".
+  - Use varied settings: school, home, park, kitchen, sports, weather, animals, friends, family, etc.
+  - BAD examples (never do this):
+    "Soon, rashly became the perfect word for that magical little moment."
+    "When the gate opened, the children began to called on toward the glowing garden path."
+    "The word brave appeared in the story."
+  - GOOD examples:
+    "She rashly agreed to the dare without checking how deep the water was."
+    "My aunt called on us every Sunday for tea and biscuits."
+    "The brave firefighter rushed into the burning building to save the cat."
+
+  CRITICAL RULES FOR SYNONYMS:
+  - The "synonym" field must be a REAL, common English word (one a 10-year-old would know).
+  - It must have the SAME meaning and SAME part of speech as the original word.
+  - Use exactly one word when possible, at most two words.
+  - Do NOT write a definition or explanation as the synonym.
+  - Do NOT invent words or combine words unnaturally.
+  - For phrasal verbs, use a natural single-word equivalent:
+    "turn up" → "appear", "call on" → "visit", "give in" → "surrender", "hold back" → "delay"
+  - GOOD synonyms: brave→courageous, happy→joyful, scared→afraid, big→large, walk→stroll
+  - BAD synonyms: brave→"showing courage", happy→"happymatch", walk→"movement"
+
   IMPORTANT JSON RULES:
   Return only raw JSON.
   Every string value must be valid JSON.
   Do not include unescaped double quotes inside any string value.
   Do not wrap example sentences in extra quotation marks.
-  Every word entry must include a child-friendly synonym or near-synonym in the "synonym" field.
-  The "synonym" field must NOT be a definition sentence.
-  The "synonym" field must be one or two words only when possible.
-  If the word is a phrasal verb, prefer a natural single-word or short-phrase equivalent.
-  Example: "turn up" -> "appear" or "arrive" depending on meaning.
-  Example: "hold back" -> "delay" or "stop" depending on meaning.
-  Example: "give in" -> "yield".
-  Bad example for synonym: "made someone very interested or curious"
-  Bad example for phrasal verb synonym: "turned up match"
-  Good example for synonym: "curious" or "fascinating"
   `;
 
   try {
     const response = await openai.chat.completions.create({
-      model: "moonshot-v1-8k",
+      model: "moonshot-v1-128k",
       messages: [
         { role: "system", content: "You are a helpful vocabulary teacher. Output strictly valid JSON." },
         { role: "user", content: prompt }
@@ -928,13 +1159,14 @@ export async function generateMaterials(apiKey: string, words: string): Promise<
       parsedContent = JSON.parse(content) as LearningData;
     } catch (parseError) {
       console.error("Initial JSON parse failed, attempting repair.", parseError);
-      parsedContent = await repairMalformedJson(openai, content, "moonshot-v1-8k");
+      parsedContent = await repairMalformedJson(openai, content, "moonshot-v1-128k");
     }
 
     const normalized = normalizeLearningData(parsedContent, parsedWords, 0);
     const withPlayableSynonyms = await ensurePlayableSynonyms(openai, normalized);
+    const withRepairedExamples = await repairMissingExamples(openai, withPlayableSynonyms);
     return {
-      ...withPlayableSynonyms,
+      ...withRepairedExamples,
       articles: [],
     };
   } catch (error) {

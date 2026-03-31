@@ -208,7 +208,7 @@ export default function SpellingModule({
                   className={`studio-input !h-[82px] !rounded-[28px] !border-2 !px-8 text-center !text-4xl font-extrabold tracking-[0.08em] placeholder:!tracking-[0.12em] ${
                     isCorrect
                       ? '!border-emerald-400 !bg-[linear-gradient(180deg,rgba(202,255,239,0.96),rgba(134,235,198,0.92))] !text-emerald-950'
-                      : '!border-[#ffd36c]/45 !bg-[linear-gradient(180deg,rgba(255,255,255,0.14),rgba(159,142,240,0.14))] !text-white shadow-[0_0_0_4px_rgba(255,211,108,0.06),0_18px_34px_rgba(7,6,28,0.24)]'
+                      : '!border-[#ffd36c]/45 !bg-[linear-gradient(180deg,rgba(255,255,255,0.82),rgba(232,226,255,0.72))] !text-[#9a3568] placeholder:!text-[#c6a7bd] shadow-[0_0_0_4px_rgba(255,211,108,0.06),0_18px_34px_rgba(244,195,220,0.24)]'
                   }`}
                   placeholder="Type here"
                   autoComplete="off"

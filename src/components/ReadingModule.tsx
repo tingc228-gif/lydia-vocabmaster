@@ -36,8 +36,7 @@ export default function ReadingModule({
   useEffect(() => {
     const savedKey =
       localStorage.getItem('deepseek_story_api_key') ||
-      localStorage.getItem('deepseek_api_key') ||
-      localStorage.getItem('kimi_api_key');
+      localStorage.getItem('deepseek_api_key');
     if (savedKey) setStoryApiKey(savedKey);
   }, []);
 
@@ -114,10 +113,10 @@ export default function ReadingModule({
         </aside>
         <section>
           <div className="studio-card text-center">
-            <p className="eyebrow">Reading lab</p>
+            <p className="eyebrow">Story Time</p>
             <h2 className="text-4xl font-semibold">No story is ready yet</h2>
             <p className="module-subcopy mx-auto mt-4 max-w-2xl">
-              Enter your DeepSeek API key, set the number of stories, then click Generate to create reading passages.
+              Enter your DeepSeek API key, set the number of stories, then click Generate.
             </p>
           </div>
         </section>

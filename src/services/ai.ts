@@ -957,76 +957,76 @@ type StoryBlueprint = {
 
 const STORY_BLUEPRINTS: StoryBlueprint[] = [
   {
-    label: 'Community Garden Rescue',
-    setting: 'a neighborhood garden right after heavy rain',
-    lead: 'two children helping a grandparent and a next-door neighbor',
-    challenge: 'save the plants and organize the tools before visitors arrive',
-    resolution: 'the garden opens on time and everyone sees how much teamwork mattered',
-    mood: 'outdoor, practical, warm, hopeful',
-    avoid: ['stage', 'audience', 'song', 'microphone', 'director', 'performance'],
+    label: 'Playground Helper',
+    setting: 'a school playground after morning rain',
+    lead: 'two children helping a teacher',
+    challenge: 'tidy the play area before recess starts',
+    resolution: 'the playground is ready and the class can play happily',
+    mood: 'gentle, cheerful, active',
+    avoid: ['museum', 'gallery', 'stage', 'microphone', 'train station', 'camp leader'],
   },
   {
-    label: 'Museum Puzzle Trip',
-    setting: 'a class trip inside a natural history museum',
-    lead: 'a small group of classmates following clues with their teacher',
-    challenge: 'solve a missing-label mystery before the guided tour ends',
-    resolution: 'the clue trail leads to a clever museum worker and the exhibit is fixed',
-    mood: 'curious, thoughtful, adventurous',
-    avoid: ['kitchen', 'garden', 'match', 'race', 'stage', 'concert'],
+    label: 'Classroom Lost-and-Found',
+    setting: 'a bright classroom before lesson time',
+    lead: 'classmates and their form teacher',
+    challenge: 'find a missing school item and return it to the right child',
+    resolution: 'the lost item is found and the day starts with smiles',
+    mood: 'calm, friendly, playful',
+    avoid: ['museum', 'concert', 'gallery', 'race', 'theater', 'tour'],
   },
   {
-    label: 'Beach Cleanup Morning',
-    setting: 'an early-morning beach cleanup by the sea',
-    lead: 'siblings working with a volunteer team',
-    challenge: 'finish a cleanup plan while the tide is changing',
-    resolution: 'the beach becomes safe again and the team finds an unexpected reward',
-    mood: 'breezy, active, cooperative',
-    avoid: ['school stage', 'theater', 'microphone', 'rehearsal', 'gallery', 'museum'],
+    label: 'Park Picnic Day',
+    setting: 'a small park near home on a sunny day',
+    lead: 'siblings with a parent',
+    challenge: 'keep the picnic safe and clean when a small problem appears',
+    resolution: 'the family solves the problem and enjoys the picnic together',
+    mood: 'warm, simple, outdoorsy',
+    avoid: ['museum', 'rehearsal', 'stage', 'gallery', 'adoption day', 'platform'],
   },
   {
-    label: 'Kitchen Mix-Up',
-    setting: 'a busy family kitchen before a shared meal',
-    lead: 'cousins cooking together while an older relative gives advice',
-    challenge: 'recover from a recipe mix-up without ruining dinner',
-    resolution: 'the meal turns out differently from planned but everyone loves it',
-    mood: 'homey, funny, slightly hectic',
-    avoid: ['stage', 'audience', 'song', 'sports field', 'museum', 'beach'],
+    label: 'Kitchen Snack Time',
+    setting: 'a family kitchen after school',
+    lead: 'a child and a parent making a simple snack',
+    challenge: 'finish the snack after one small mistake',
+    resolution: 'the snack is ready and everyone enjoys it',
+    mood: 'homey, funny, easygoing',
+    avoid: ['museum', 'sports field', 'stage', 'audience', 'train station', 'gallery'],
   },
   {
-    label: 'Forest Trail Map',
-    setting: 'a nature trail during a school camp',
-    lead: 'friends hiking with a map and a camp leader nearby',
-    challenge: 'find the right trail markers before sunset',
-    resolution: 'they return safely after learning how to trust one another',
-    mood: 'calm, outdoorsy, quietly suspenseful',
-    avoid: ['theater', 'microphone', 'kitchen', 'museum hall', 'gallery'],
+    label: 'Rainy Walk Home',
+    setting: 'a path outside school when light rain begins',
+    lead: 'friends walking home with an adult nearby',
+    challenge: 'share space, stay dry, and get home safely',
+    resolution: 'they reach home safely and feel proud of helping one another',
+    mood: 'soft, caring, steady',
+    avoid: ['camp', 'museum hall', 'gallery', 'concert', 'adoption day'],
   },
   {
-    label: 'Pet Shelter Afternoon',
-    setting: 'an animal shelter during adoption day',
-    lead: 'children helping a shelter worker and nervous animals',
-    challenge: 'prepare the shelter before visiting families arrive',
-    resolution: 'the animals calm down and the day ends with good news',
+    label: 'Pet Corner Visit',
+    setting: 'a small pet corner in school',
+    lead: 'children helping to care for class pets',
+    challenge: 'feed the pets and keep their space neat before visitors come',
+    resolution: 'the pets are calm and the children feel happy',
     mood: 'gentle, caring, lively',
-    avoid: ['stage', 'concert', 'race', 'cooking class', 'museum'],
+    avoid: ['concert', 'race', 'museum', 'gallery', 'platform', 'adoption day'],
   },
   {
-    label: 'Train Station Mix-Up',
-    setting: 'a crowded train station during a family trip',
-    lead: 'siblings, a parent, and a helpful stranger',
-    challenge: 'recover a lost bag and reach the right platform in time',
-    resolution: 'they board safely and laugh about the confusion afterward',
-    mood: 'fast-moving, urban, relieving',
-    avoid: ['stage', 'audience', 'garden', 'kitchen', 'gallery'],
+    label: 'Library Book Day',
+    setting: 'a quiet school library in the afternoon',
+    lead: 'two children and the librarian',
+    challenge: 'find the right book and keep the library rules',
+    resolution: 'they get the book they need and leave quietly and happily',
+    mood: 'quiet, thoughtful, safe',
+    avoid: ['train station', 'gallery', 'audience', 'stage', 'concert', 'camp'],
   },
   {
-    label: 'Art Gallery Setup',
-    setting: 'a school art gallery being prepared for visitors',
-    lead: 'students arranging paintings and signs with their art teacher',
-    challenge: 'finish the display after a last-minute accident',
-    resolution: 'the gallery opens beautifully and the students feel proud',
-    mood: 'creative, bright, collaborative',
-    avoid: ['microphone', 'song', 'sports match', 'beach cleanup', 'cooking class'],
+    label: 'Birthday Card Surprise',
+    setting: 'an art table at home',
+    lead: 'a child making a card with a brother, sister, or friend',
+    challenge: 'finish the card nicely before the birthday meal',
+    resolution: 'the card is ready and the surprise feels special',
+    mood: 'creative, bright, sweet',
+    avoid: ['gallery', 'sports match', 'concert', 'museum', 'tour', 'platform'],
   },
 ];
 
@@ -1158,10 +1158,40 @@ function looksTooSimilarToExistingStories(
 }
 
 function getStorySentenceCountGuidance(blankCount: number) {
-  if (blankCount <= 4) return 'about 4 to 5 sentences total';
-  if (blankCount <= 6) return 'about 5 to 6 sentences total';
-  if (blankCount <= 8) return 'about 6 to 8 sentences total';
-  return 'about 8 to 10 sentences total';
+  if (blankCount <= 4) return 'about 3 to 4 very short sentences total';
+  if (blankCount <= 6) return 'about 4 to 5 short sentences total';
+  if (blankCount <= 8) return 'about 5 to 6 short sentences total';
+  return 'about 6 to 7 short sentences total';
+}
+
+function getStorySentenceCountLimit(blankCount: number) {
+  if (blankCount <= 4) return 4;
+  if (blankCount <= 6) return 5;
+  if (blankCount <= 8) return 6;
+  return 7;
+}
+
+function getStoryWordCountLimit(blankCount: number) {
+  if (blankCount <= 4) return 45;
+  if (blankCount <= 6) return 65;
+  if (blankCount <= 8) return 82;
+  return 96;
+}
+
+function countStorySentences(text: string) {
+  return text
+    .replace(/\[blank_\d+\]/g, 'blank')
+    .split(/[.!?]+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean).length;
+}
+
+function countStoryWords(text: string) {
+  return text
+    .replace(/\[blank_\d+\]/g, 'blank')
+    .replace(/[^a-z0-9\s'-]/gi, ' ')
+    .split(/\s+/)
+    .filter(Boolean).length;
 }
 
 function buildExpectedArticleFromWords(
@@ -1380,6 +1410,16 @@ function normalizeArticleCandidate(
     return reject('story too similar to an existing article', { text });
   }
 
+  const blankCount = expectedArticle.blanks.length;
+  const sentenceCount = countStorySentences(text);
+  const wordCount = countStoryWords(text);
+  if (sentenceCount > getStorySentenceCountLimit(blankCount)) {
+    return reject('story too long for early-primary readers', { sentenceCount, text });
+  }
+  if (wordCount > getStoryWordCountLimit(blankCount)) {
+    return reject('story word count too high for early-primary readers', { wordCount, text });
+  }
+
   const explanationByAnswer = new Map<string, string>(
     normalized.blanks
       .filter((blank) => blank.answer)
@@ -1476,9 +1516,13 @@ Rules:
   - Mood: ${blueprint.mood}
   - Avoid these motifs: ${blueprint.avoid.join(', ')}
 
-Write one short coherent story for upper-elementary learners.
+Write one very short coherent story for Singapore Primary 1 to Primary 2 learners.
 - The story must feel continuous, with setup, problem, and resolution.
-- The story should sound like a real mini storybook passage, not a worksheet.
+- The story should sound like a real little storybook passage, not a worksheet.
+- Use simple everyday settings that a 7 to 8 year old child knows well, such as home, school, the playground, the library, or the park.
+- Use very short sentences, simple grammar, and easy linking words like "and", "but", "so", and "then".
+- Prefer common everyday words around the target blanks. Avoid abstract ideas, figurative language, and complicated descriptions.
+- If the blueprint feels too advanced, simplify it into an easy child-friendly version while keeping the same general direction.
 - Keep it compact: ${getStorySentenceCountGuidance(blankCount)}.
 - It is okay to use one target word in most sentences and two target words in a few sentences when it still sounds natural.
 - Make sure every target word is genuinely used in context, not just squeezed in unnaturally.
@@ -1519,7 +1563,7 @@ async function generateStoryArticle(
             {
               role: "system",
               content:
-                "You write one short coherent children's story for vocabulary practice. Return strictly valid JSON only. The passage must read like one connected story, not unrelated sentences.",
+                "You write one very short, easy children's story for Singapore Primary 1 to Primary 2 vocabulary practice. Use simple everyday language and return strictly valid JSON only. The passage must read like one connected story, not unrelated sentences.",
             },
             {
               role: "user",

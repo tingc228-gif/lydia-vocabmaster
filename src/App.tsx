@@ -327,11 +327,14 @@ function PetStatusPanel({
         </div>
       </div>
 
-      <div className="pet-rules-card">
-        <div className="pet-rules-header">
-          <Sparkles size={16} />
-          <span>Pet rules</span>
-        </div>
+      <details className="pet-rules-card">
+        <summary className="pet-rules-summary">
+          <span className="pet-rules-header">
+            <Sparkles size={16} />
+            <span>Pet rules</span>
+          </span>
+          <span className="pet-rules-summary-copy">Tap to show or hide</span>
+        </summary>
         <div className="pet-rules-grid">
           <div className="pet-rule-pill">Spelling: no hint = Food +10%</div>
           <div className="pet-rule-pill">Spelling: used hint = Food +5%</div>
@@ -344,7 +347,7 @@ function PetStatusPanel({
           <div className="pet-rule-pill">Food 5 / 10 / 20 / 30 with Joy 10 = Growth +5 / +10 / +15 / +20</div>
           <div className="pet-rule-pill">After growth, Food and Joy reset to 0%</div>
         </div>
-      </div>
+      </details>
     </div>
   );
 }

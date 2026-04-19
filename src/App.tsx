@@ -326,6 +326,25 @@ function PetStatusPanel({
           </div>
         </div>
       </div>
+
+      <div className="pet-rules-card">
+        <div className="pet-rules-header">
+          <Sparkles size={16} />
+          <span>Pet rules</span>
+        </div>
+        <div className="pet-rules-grid">
+          <div className="pet-rule-pill">Spelling: no hint = Food +10%</div>
+          <div className="pet-rule-pill">Spelling: used hint = Food +5%</div>
+          <div className="pet-rule-pill">Sentence Cloze: Joy +5%</div>
+          <div className="pet-rule-pill">Vocabulary in Context: Joy +5%</div>
+          <div className="pet-rule-pill">Each Story: 0 mistakes = Food +10%</div>
+          <div className="pet-rule-pill">Each Story: 1-2 mistakes = Food +5%</div>
+          <div className="pet-rule-pill">Each Story: 3+ mistakes = Food +0%</div>
+          <div className="pet-rule-pill">Growth needs at least Food 5% and Joy 10%</div>
+          <div className="pet-rule-pill">Food 5 / 10 / 20 / 30 with Joy 10 = Growth +5 / +10 / +15 / +20</div>
+          <div className="pet-rule-pill">After growth, Food and Joy reset to 0%</div>
+        </div>
+      </div>
     </div>
   );
 }

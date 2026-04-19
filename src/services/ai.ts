@@ -133,6 +133,31 @@ function isProviderBusyError(error: unknown): boolean {
   );
 }
 
+const PROVIDER_ATTEMPT_TIMEOUT_MS = 90000;
+
+async function withAttemptTimeout<T>(
+  task: () => Promise<T>,
+  label: string,
+  timeoutMs: number = PROVIDER_ATTEMPT_TIMEOUT_MS,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      task(),
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`${label} timed out after ${Math.round(timeoutMs / 1000)} seconds.`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 async function withProviderRetries<T>(
   task: () => Promise<T>,
   label: string,
@@ -142,7 +167,7 @@ async function withProviderRetries<T>(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      return await task();
+      return await withAttemptTimeout(task, label);
     } catch (error) {
       lastError = error;
 

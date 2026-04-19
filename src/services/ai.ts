@@ -287,6 +287,16 @@ function normalizePhrase(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function getWordKey(value: string): string {
+  return normalizePhrase(value) || value.toLowerCase().trim();
+}
+
+function textContainsTargetWord(text: string, targetWord: string): boolean {
+  const normalizedText = normalizePhrase(text);
+  const normalizedTarget = getWordKey(targetWord);
+  return Boolean(normalizedText && normalizedTarget && normalizedText.includes(normalizedTarget));
+}
+
 function isPhrasalVerb(word: string): boolean {
   return /\s/.test(word.trim()) || /-/.test(word.trim());
 }
@@ -2116,13 +2126,13 @@ function normalizeSentenceClozeQuestions(
   targetWords: LearningData["words"],
   allWords: LearningData["words"],
 ): SentenceClozeQuestion[] {
-  const targetMap = new Map(targetWords.map((word) => [word.word.toLowerCase(), word]));
-  const orderedTargets = targetWords.map((word) => word.word.toLowerCase());
+  const targetMap = new Map(targetWords.map((word) => [getWordKey(word.word), word]));
+  const orderedTargets = targetWords.map((word) => getWordKey(word.word));
   const normalizedQuestions = new Map<string, SentenceClozeQuestion>();
 
   for (const question of rawQuestions) {
     const answerCandidate = normalizeOptionText(question?.answer || question?.targetWord);
-    const targetKey = answerCandidate.toLowerCase();
+    const targetKey = getWordKey(answerCandidate);
     const targetWord = targetMap.get(targetKey);
     if (!targetWord) continue;
 
@@ -2163,18 +2173,18 @@ function normalizeVocabularyInContextQuestions(
   targetWords: LearningData["words"],
   allWords: LearningData["words"],
 ): VocabularyInContextQuestion[] {
-  const targetMap = new Map(targetWords.map((word) => [word.word.toLowerCase(), word]));
-  const orderedTargets = targetWords.map((word) => word.word.toLowerCase());
+  const targetMap = new Map(targetWords.map((word) => [getWordKey(word.word), word]));
+  const orderedTargets = targetWords.map((word) => getWordKey(word.word));
   const normalizedQuestions = new Map<string, VocabularyInContextQuestion>();
 
   for (const question of rawQuestions) {
     const targetWordLabel = normalizeOptionText(question?.targetWord);
-    const targetKey = targetWordLabel.toLowerCase();
+    const targetKey = getWordKey(targetWordLabel);
     const targetWord = targetMap.get(targetKey);
     if (!targetWord) continue;
 
     const passage = String(question?.passage || '').trim();
-    if (!passage || !new RegExp(targetWord.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(passage)) {
+    if (!passage || !textContainsTargetWord(passage, targetWord.word)) {
       continue;
     }
 
@@ -2183,7 +2193,7 @@ function normalizeVocabularyInContextQuestions(
       answer,
       Array.isArray(question?.options) ? question.options : [],
       allWords
-        .filter((word) => word.word.toLowerCase() !== targetKey)
+        .filter((word) => getWordKey(word.word) !== targetKey)
         .flatMap((word) => [conciseMeaningChoice(word.synonym), conciseMeaningChoice(word.definition)]),
     );
 

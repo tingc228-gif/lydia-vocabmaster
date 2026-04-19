@@ -2198,45 +2198,79 @@ function assertQuestionCoverage(
   }
 }
 
+function getMissingQuestionWords(
+  questions: Array<{ targetWord: string }>,
+  targetWords: LearningData["words"],
+) {
+  return targetWords.filter(
+    (word) => !questions.some((question) => question.targetWord.toLowerCase() === word.word.toLowerCase()),
+  );
+}
+
+function mergeQuestionsByTarget<T extends { targetWord: string }>(
+  targetWords: LearningData["words"],
+  existing: T[],
+  additions: T[],
+) {
+  const merged = new Map<string, T>();
+
+  for (const question of [...existing, ...additions]) {
+    merged.set(question.targetWord.toLowerCase(), question);
+  }
+
+  return shuffleWords(
+    targetWords
+      .map((word) => merged.get(word.word.toLowerCase()))
+      .filter((question): question is T => Boolean(question)),
+  );
+}
+
 async function generateSentenceClozeQuestions(
   openai: OpenAI,
   words: LearningData["words"],
   allWords: LearningData["words"],
 ): Promise<SentenceClozeQuestion[]> {
   if (words.length === 0) return [];
+  let combinedQuestions: SentenceClozeQuestion[] = [];
+  let pendingWords = words;
 
-  const response = await withProviderRetries(
-    () =>
-      openai.chat.completions.create({
-        model: MOONSHOT_MODEL,
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You create high-quality Singapore-style vocabulary exam questions. Return strictly valid JSON only.',
-          },
-          { role: 'user', content: buildSentenceClozePrompt(words) },
-        ],
-        max_tokens: 4200,
-      }),
-    'Sentence Cloze generation',
-    4,
-  );
+  for (let attempt = 0; attempt < 3 && pendingWords.length > 0; attempt += 1) {
+    const response = await withProviderRetries(
+      () =>
+        openai.chat.completions.create({
+          model: MOONSHOT_MODEL,
+          response_format: { type: 'json_object' },
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You create high-quality Singapore-style vocabulary exam questions. Return strictly valid JSON only.',
+            },
+            { role: 'user', content: buildSentenceClozePrompt(pendingWords) },
+          ],
+          max_tokens: 4200,
+        }),
+      `Sentence Cloze generation${attempt > 0 ? ` retry ${attempt}` : ''}`,
+      4,
+    );
 
-  const content = extractJsonObject(response.choices[0].message.content || '{}');
-  let parsed: { questions?: any[] };
+    const content = extractJsonObject(response.choices[0].message.content || '{}');
+    let parsed: { questions?: any[] };
 
-  try {
-    parsed = JSON.parse(content) as { questions?: any[] };
-  } catch (error) {
-    console.error('Sentence Cloze parse failed, attempting repair.', error);
-    parsed = await repairMalformedJsonObject<{ questions?: any[] }>(openai, content, MOONSHOT_MODEL);
+    try {
+      parsed = JSON.parse(content) as { questions?: any[] };
+    } catch (error) {
+      console.error('Sentence Cloze parse failed, attempting repair.', error);
+      parsed = await repairMalformedJsonObject<{ questions?: any[] }>(openai, content, MOONSHOT_MODEL);
+    }
+
+    const normalized = normalizeSentenceClozeQuestions(parsed.questions || [], pendingWords, allWords);
+    combinedQuestions = mergeQuestionsByTarget(words, combinedQuestions, normalized);
+    pendingWords = getMissingQuestionWords(combinedQuestions, words);
   }
 
-  const normalized = normalizeSentenceClozeQuestions(parsed.questions || [], words, allWords);
-  assertQuestionCoverage('Sentence Cloze', normalized, words);
-  return normalized;
+  assertQuestionCoverage('Sentence Cloze', combinedQuestions, words);
+  return combinedQuestions;
 }
 
 async function generateVocabularyInContextQuestions(
@@ -2245,39 +2279,46 @@ async function generateVocabularyInContextQuestions(
   allWords: LearningData["words"],
 ): Promise<VocabularyInContextQuestion[]> {
   if (words.length === 0) return [];
+  let combinedQuestions: VocabularyInContextQuestion[] = [];
+  let pendingWords = words;
 
-  const response = await withProviderRetries(
-    () =>
-      openai.chat.completions.create({
-        model: MOONSHOT_MODEL,
-        response_format: { type: 'json_object' },
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You create high-quality Singapore-style vocabulary-in-context questions. Return strictly valid JSON only.',
-          },
-          { role: 'user', content: buildVocabularyInContextPrompt(words) },
-        ],
-        max_tokens: 5200,
-      }),
-    'Vocabulary in Context generation',
-    4,
-  );
+  for (let attempt = 0; attempt < 3 && pendingWords.length > 0; attempt += 1) {
+    const response = await withProviderRetries(
+      () =>
+        openai.chat.completions.create({
+          model: MOONSHOT_MODEL,
+          response_format: { type: 'json_object' },
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You create high-quality Singapore-style vocabulary-in-context questions. Return strictly valid JSON only.',
+            },
+            { role: 'user', content: buildVocabularyInContextPrompt(pendingWords) },
+          ],
+          max_tokens: 5200,
+        }),
+      `Vocabulary in Context generation${attempt > 0 ? ` retry ${attempt}` : ''}`,
+      4,
+    );
 
-  const content = extractJsonObject(response.choices[0].message.content || '{}');
-  let parsed: { questions?: any[] };
+    const content = extractJsonObject(response.choices[0].message.content || '{}');
+    let parsed: { questions?: any[] };
 
-  try {
-    parsed = JSON.parse(content) as { questions?: any[] };
-  } catch (error) {
-    console.error('Vocabulary in Context parse failed, attempting repair.', error);
-    parsed = await repairMalformedJsonObject<{ questions?: any[] }>(openai, content, MOONSHOT_MODEL);
+    try {
+      parsed = JSON.parse(content) as { questions?: any[] };
+    } catch (error) {
+      console.error('Vocabulary in Context parse failed, attempting repair.', error);
+      parsed = await repairMalformedJsonObject<{ questions?: any[] }>(openai, content, MOONSHOT_MODEL);
+    }
+
+    const normalized = normalizeVocabularyInContextQuestions(parsed.questions || [], pendingWords, allWords);
+    combinedQuestions = mergeQuestionsByTarget(words, combinedQuestions, normalized);
+    pendingWords = getMissingQuestionWords(combinedQuestions, words);
   }
 
-  const normalized = normalizeVocabularyInContextQuestions(parsed.questions || [], words, allWords);
-  assertQuestionCoverage('Vocabulary in Context', normalized, words);
-  return normalized;
+  assertQuestionCoverage('Vocabulary in Context', combinedQuestions, words);
+  return combinedQuestions;
 }
 
 async function generateExamQuestionPack(

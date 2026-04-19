@@ -2,6 +2,7 @@ import { OpenAI } from "openai";
 import { LearningData, SentenceClozeQuestion, VocabularyInContextQuestion } from "../types";
 
 const MOONSHOT_MODEL = "kimi-k2.5";
+const TARGET_WORDS_PER_STORY = 6;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -935,7 +936,7 @@ ${articlePrompt}`,
 }
 
 function buildArticleChunks(words: LearningData["words"], articleCount: number) {
-  const safeArticleCount = Math.max(1, articleCount);
+  const safeArticleCount = Math.max(1, articleCount, Math.ceil(words.length / TARGET_WORDS_PER_STORY));
   const chunks: typeof words[] = Array.from({ length: safeArticleCount }, () => []);
 
   words.forEach((word, index) => {
@@ -1413,10 +1414,10 @@ function normalizeArticleCandidate(
   const blankCount = expectedArticle.blanks.length;
   const sentenceCount = countStorySentences(text);
   const wordCount = countStoryWords(text);
-  if (sentenceCount > getStorySentenceCountLimit(blankCount)) {
+  if (sentenceCount > getStorySentenceCountLimit(blankCount) + 1) {
     return reject('story too long for early-primary readers', { sentenceCount, text });
   }
-  if (wordCount > getStoryWordCountLimit(blankCount)) {
+  if (wordCount > getStoryWordCountLimit(blankCount) + 8) {
     return reject('story word count too high for early-primary readers', { wordCount, text });
   }
 
@@ -1579,7 +1580,7 @@ async function generateStoryArticle(
               ),
             },
           ],
-          max_tokens: 1500,
+          max_tokens: 950,
           temperature: 0.6,
           response_format: { type: "json_object" },
         }),
@@ -2603,7 +2604,7 @@ export async function generateNextStoryArticle(
     throw new Error('All of today’s words have already been used in stories.');
   }
 
-  const selectedWords = shuffleWords(remainingWords).slice(0, Math.min(10, remainingWords.length));
+  const selectedWords = shuffleWords(remainingWords).slice(0, Math.min(TARGET_WORDS_PER_STORY, remainingWords.length));
   const openai = createMoonshotClient();
 
   try {

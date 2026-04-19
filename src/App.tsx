@@ -76,6 +76,8 @@ const DEFAULT_PET_STATE: PetState = {
   animationState: 'resting',
 };
 
+const TARGET_WORDS_PER_STORY = 6;
+
 function createDefaultRewardState(): RewardState {
   return {
     spelling: false,
@@ -87,7 +89,7 @@ function createDefaultRewardState(): RewardState {
 
 function getTargetStoryCount(data: LearningData | null) {
   if (!data || data.words.length === 0) return 0;
-  return Math.max(1, Math.ceil(data.words.length / 10));
+  return Math.max(1, Math.ceil(data.words.length / TARGET_WORDS_PER_STORY));
 }
 
 function createModuleGenerationState(data: LearningData | null): ModuleGenerationState {

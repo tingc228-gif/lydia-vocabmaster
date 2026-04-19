@@ -291,10 +291,47 @@ function getWordKey(value: string): string {
   return normalizePhrase(value) || value.toLowerCase().trim();
 }
 
+function getWordAliases(value: string): string[] {
+  const aliases = new Set<string>();
+  const raw = value.trim();
+  const addAlias = (candidate: string) => {
+    const key = getWordKey(candidate);
+    if (key) aliases.add(key);
+  };
+
+  addAlias(raw);
+  addAlias(raw.replace(/[()]/g, ' '));
+  addAlias(raw.replace(/\([^)]*\)/g, ' '));
+
+  const parentheticalContents = Array.from(raw.matchAll(/\(([^)]*)\)/g))
+    .map((match) => match[1]?.trim())
+    .filter(Boolean) as string[];
+
+  if (parentheticalContents.length > 0) {
+    addAlias(raw.replace(/[()]/g, ' ').replace(/\s+/g, ' '));
+    addAlias(raw.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' '));
+
+    for (const content of parentheticalContents) {
+      addAlias(raw.replace(/\([^)]*\)/g, ` ${content} `));
+    }
+  }
+
+  return Array.from(aliases);
+}
+
+function createTargetWordAliasMap(targetWords: LearningData["words"]) {
+  const aliasMap = new Map<string, LearningData["words"][number]>();
+  for (const word of targetWords) {
+    for (const alias of getWordAliases(word.word)) {
+      aliasMap.set(alias, word);
+    }
+  }
+  return aliasMap;
+}
+
 function textContainsTargetWord(text: string, targetWord: string): boolean {
   const normalizedText = normalizePhrase(text);
-  const normalizedTarget = getWordKey(targetWord);
-  return Boolean(normalizedText && normalizedTarget && normalizedText.includes(normalizedTarget));
+  return getWordAliases(targetWord).some((alias) => Boolean(normalizedText && alias && normalizedText.includes(alias)));
 }
 
 function isPhrasalVerb(word: string): boolean {
@@ -2126,7 +2163,7 @@ function normalizeSentenceClozeQuestions(
   targetWords: LearningData["words"],
   allWords: LearningData["words"],
 ): SentenceClozeQuestion[] {
-  const targetMap = new Map(targetWords.map((word) => [getWordKey(word.word), word]));
+  const targetMap = createTargetWordAliasMap(targetWords);
   const orderedTargets = targetWords.map((word) => getWordKey(word.word));
   const normalizedQuestions = new Map<string, SentenceClozeQuestion>();
 
@@ -2173,7 +2210,7 @@ function normalizeVocabularyInContextQuestions(
   targetWords: LearningData["words"],
   allWords: LearningData["words"],
 ): VocabularyInContextQuestion[] {
-  const targetMap = new Map(targetWords.map((word) => [getWordKey(word.word), word]));
+  const targetMap = createTargetWordAliasMap(targetWords);
   const orderedTargets = targetWords.map((word) => getWordKey(word.word));
   const normalizedQuestions = new Map<string, VocabularyInContextQuestion>();
 

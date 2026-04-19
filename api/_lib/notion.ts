@@ -2,7 +2,7 @@ const NOTION_API_ORIGIN = 'https://api.notion.com';
 const NOTION_VERSION = process.env.NOTION_API_VERSION || '2025-09-03';
 
 export const PROPERTY_WORD = '单词';
-export const PROPERTY_MEANING = '中文释义';
+export const PROPERTY_MEANING = '英文释义';
 export const PROPERTY_LEVEL = '熟练度';
 export const PROPERTY_NEXT_REVIEW = '下次复习时间';
 export const PROPERTY_LAST_REVIEW = '上次复习时间';

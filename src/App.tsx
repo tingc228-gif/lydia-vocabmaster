@@ -76,7 +76,7 @@ const DEFAULT_PET_STATE: PetState = {
   animationState: 'resting',
 };
 
-const TARGET_WORDS_PER_STORY = 6;
+const TARGET_WORDS_PER_STORY = 5;
 
 function createDefaultRewardState(): RewardState {
   return {
@@ -727,7 +727,7 @@ export default function App() {
   );
   const requiredReadingStoryCount =
     activeNotionBatch.length > 0
-      ? Math.max(1, Math.ceil(activeNotionBatch.length / 10))
+      ? Math.max(1, Math.ceil(activeNotionBatch.length / TARGET_WORDS_PER_STORY))
       : learningData?.articles.length || 0;
   const allReadingWordsCovered =
     activeBatchWordSet.size > 0

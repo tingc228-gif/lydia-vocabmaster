@@ -2,7 +2,7 @@ import { OpenAI } from "openai";
 import { LearningData, SentenceClozeQuestion, VocabularyInContextQuestion } from "../types";
 
 const MOONSHOT_MODEL = "kimi-k2.5";
-const TARGET_WORDS_PER_STORY = 6;
+const TARGET_WORDS_PER_STORY = 5;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));

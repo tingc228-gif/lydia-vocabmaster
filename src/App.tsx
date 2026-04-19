@@ -61,10 +61,12 @@ interface PersistedAppState {
   storyIncorrectWords: string[];
   reviewSyncStatus: string;
   reviewSynced: boolean;
+  pendingGenerationStartedAt: number | null;
 }
 
 const APP_STATE_STORAGE_KEY = 'vocabmaster_app_state_v1';
 const PET_STORAGE_KEY = 'pet_state_v1';
+const AUTO_RESUME_WINDOW_MS = 10 * 60 * 1000;
 
 const DEFAULT_PET_STATE: PetState = {
   foodPercent: 0,
@@ -178,6 +180,8 @@ function readPersistedAppState(): PersistedAppState {
     storyIncorrectWords: Array.isArray(stored.storyIncorrectWords) ? stored.storyIncorrectWords : [],
     reviewSyncStatus: typeof stored.reviewSyncStatus === 'string' ? stored.reviewSyncStatus : '',
     reviewSynced: Boolean(stored.reviewSynced),
+    pendingGenerationStartedAt:
+      typeof stored.pendingGenerationStartedAt === 'number' ? stored.pendingGenerationStartedAt : null,
   };
 }
 
@@ -341,6 +345,9 @@ export default function App() {
   const [isSyncingReview, setIsSyncingReview] = useState(false);
   const [reviewSyncStatus, setReviewSyncStatus] = useState(persistedAppState.reviewSyncStatus);
   const [reviewSynced, setReviewSynced] = useState(persistedAppState.reviewSynced);
+  const [pendingGenerationStartedAt, setPendingGenerationStartedAt] = useState<number | null>(
+    persistedAppState.pendingGenerationStartedAt,
+  );
   const generationRunIdRef = useRef(0);
   const hasResumedPersistedPipelineRef = useRef(false);
   const hasHydratedPetStateRef = useRef(false);
@@ -355,8 +362,18 @@ export default function App() {
       storyIncorrectWords,
       reviewSyncStatus,
       reviewSynced,
+      pendingGenerationStartedAt,
     } satisfies PersistedAppState);
-  }, [activeNotionBatch, activeTab, learningData, reviewSyncStatus, reviewSynced, rewardState, storyIncorrectWords]);
+  }, [
+    activeNotionBatch,
+    activeTab,
+    learningData,
+    pendingGenerationStartedAt,
+    reviewSyncStatus,
+    reviewSynced,
+    rewardState,
+    storyIncorrectWords,
+  ]);
 
   useEffect(() => {
     writeStoredJSON(PET_STORAGE_KEY, {
@@ -578,10 +595,13 @@ export default function App() {
       } else {
         setModuleGeneration((current) => ({ ...current, storyTime: 'ready' }));
       }
+
+      setPendingGenerationStartedAt(null);
     } catch (error) {
       if (isStale()) return;
 
       const message = error instanceof Error ? error.message : 'Unknown error';
+      setPendingGenerationStartedAt(null);
       setModuleGeneration((current) => ({
         ...current,
         ...(currentModule ? { [currentModule]: 'error' as const } : {}),
@@ -596,16 +616,28 @@ export default function App() {
     hasResumedPersistedPipelineRef.current = true;
 
     if (!hasPendingModuleGeneration(persistedAppState.learningData)) return;
+    if (
+      !persistedAppState.pendingGenerationStartedAt ||
+      Date.now() - persistedAppState.pendingGenerationStartedAt > AUTO_RESUME_WINDOW_MS
+    ) {
+      setPendingGenerationStartedAt(null);
+      setModuleGeneration((current) => ({
+        ...createModuleGenerationState(persistedAppState.learningData),
+        errorMessage: 'Previous unfinished generation was stopped. Tap Generate all modules to retry.',
+      }));
+      return;
+    }
 
     const runId = generationRunIdRef.current + 1;
     generationRunIdRef.current = runId;
     setModuleGeneration(createModuleGenerationState(persistedAppState.learningData));
     void runModulePipeline(persistedAppState.learningData as LearningData, runId);
-  }, [persistedAppState.learningData]);
+  }, [persistedAppState.learningData, persistedAppState.pendingGenerationStartedAt]);
 
   const handleGenerate = async (wordsText: string) => {
     const runId = generationRunIdRef.current + 1;
     generationRunIdRef.current = runId;
+    setPendingGenerationStartedAt(Date.now());
     setIsLoading(true);
     setModuleGeneration({
       cards: 'loading',
@@ -637,6 +669,7 @@ export default function App() {
     } catch (error) {
       console.error(error);
       const message = error instanceof Error ? error.message : 'Unknown error';
+      setPendingGenerationStartedAt(null);
       if (generationRunIdRef.current === runId) {
         setModuleGeneration({
           cards: 'error',

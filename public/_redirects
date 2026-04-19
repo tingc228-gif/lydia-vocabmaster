@@ -1,2 +1,2 @@
-/moonshot/*  https://api.moonshot.cn/:splat  200
-/deepseek/*  https://api.deepseek.com/:splat  200
+/moonshot/*  /.netlify/functions/moonshot/:splat  200
+/deepseek/*  /.netlify/functions/deepseek/:splat  200

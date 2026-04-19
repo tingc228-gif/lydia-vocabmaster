@@ -1,27 +1,48 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Key, Sparkles } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronLeft, ChevronRight, ShieldCheck, Sparkles } from 'lucide-react';
 import { LearningData } from '../types';
 
 export default function ReadingModule({
   data,
   onArticleScored,
-  onRegenerateStories,
-  isRegeneratingStories,
+  isGeneratingStory,
+  expectedStoryCount,
+  moduleGenerationError,
 }: {
   data: LearningData;
-  onArticleScored?: (articleIndex: number, mistakes: number) => void;
-  onRegenerateStories?: (apiKey: string, storyCount: number) => Promise<void> | void;
-  isRegeneratingStories?: boolean;
+  onArticleScored?: (articleIndex: number, mistakes: number, incorrectWords: string[]) => void;
+  isGeneratingStory?: boolean;
+  expectedStoryCount?: number;
+  moduleGenerationError?: string;
 }) {
   const [currentArticleIndex, setCurrentArticleIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [selectedBlank, setSelectedBlank] = useState<string | null>(null);
   const [showExplanations, setShowExplanations] = useState(false);
   const [scoredArticles, setScoredArticles] = useState<number[]>([]);
-  const [storyApiKey, setStoryApiKey] = useState('');
-  const [storyCount, setStoryCount] = useState(Math.max(1, data.articles.length || 1));
+  const previousStoryCountRef = useRef(data.articles.length);
 
   const article = data.articles[currentArticleIndex];
+  const usedStoryAnswers = useMemo(
+    () => new Set(data.articles.flatMap((story) => story.blanks.map((blank) => blank.answer.toLowerCase()))),
+    [data.articles],
+  );
+  const remainingStoryWords = useMemo(
+    () => data.words.filter((word) => !usedStoryAnswers.has(word.word.toLowerCase())),
+    [data.words, usedStoryAnswers],
+  );
+  const nextStoryWordCount = Math.min(10, remainingStoryWords.length);
+  const usedBlankIds = useMemo(() => {
+    if (!article) return new Set<string>();
+
+    return new Set(
+      Array.from(article.text.matchAll(/\[(blank_\d+)\]/g)).map((match) => match[1]),
+    );
+  }, [article]);
+  const playableBlanks = useMemo(() => {
+    if (!article) return [];
+    return article.blanks.filter((blank) => usedBlankIds.has(blank.id));
+  }, [article, usedBlankIds]);
 
   useEffect(() => {
     setAnswers({});
@@ -34,23 +55,28 @@ export default function ReadingModule({
   }, [data]);
 
   useEffect(() => {
-    const savedKey =
-      localStorage.getItem('deepseek_story_api_key') ||
-      localStorage.getItem('deepseek_api_key');
-    if (savedKey) setStoryApiKey(savedKey);
-  }, []);
-
-  useEffect(() => {
-    setStoryCount(Math.max(1, data.articles.length || 1));
+    if (data.articles.length > previousStoryCountRef.current) {
+      setCurrentArticleIndex(data.articles.length - 1);
+    }
+    previousStoryCountRef.current = data.articles.length;
   }, [data.articles.length]);
 
   const wordBank = useMemo(() => {
     if (!article) return [];
 
-    const words = article.blanks.map((blank) => blank.answer);
-    const safeDistractors = (article.distractors || []).filter((word) => !words.includes(word)).slice(0, 2);
-    return [...words, ...safeDistractors].sort(() => 0.5 - Math.random());
-  }, [article]);
+    const answerWords = playableBlanks.map((blank) => blank.answer);
+    const unusedTargetWords = article.blanks
+      .filter((blank) => !usedBlankIds.has(blank.id))
+      .map((blank) => blank.answer);
+    const distractors = [...(article.distractors || []), ...unusedTargetWords, ...data.words.map((word) => word.word)]
+      .map((word) => word.trim())
+      .filter(Boolean)
+      .filter((word) => !answerWords.includes(word))
+      .filter((word, index, words) => words.indexOf(word) === index)
+      .slice(0, 2);
+
+    return [...answerWords, ...distractors].sort(() => 0.5 - Math.random());
+  }, [article, data.words, playableBlanks, usedBlankIds]);
 
   if (!article) {
     return (
@@ -60,53 +86,31 @@ export default function ReadingModule({
             <div className="flex h-full flex-col">
               <div className="mb-5 rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
                 <label className="field-label">
-                  <Key size={16} />
-                  DeepSeek Story Key
+                  <ShieldCheck size={16} />
+                  Story generation
                 </label>
-                <input
-                  type="password"
-                  value={storyApiKey}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setStoryApiKey(value);
-                    localStorage.setItem('deepseek_story_api_key', value);
-                  }}
-                  placeholder="sk-..."
-                  className="studio-input"
-                />
-                <div className="mt-4">
-                  <label className="field-label">
-                    <ChevronRight size={16} />
-                    Story count
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={Math.max(1, data.words.length)}
-                    value={storyCount}
-                    onChange={(event) => setStoryCount(Math.max(1, Number(event.target.value) || 1))}
-                    className="studio-input"
-                  />
-                  <p className="muted-copy mt-2 text-sm">
-                    About {Math.max(1, Math.floor(data.words.length / Math.max(1, storyCount)))} blanks per story
-                    ({data.words.length} words total divided across {storyCount} stories)
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => onRegenerateStories?.(storyApiKey, storyCount)}
-                  disabled={!storyApiKey.trim() || !onRegenerateStories || !!isRegeneratingStories}
-                  className="primary-button mt-4 w-full"
-                >
-                  {isRegeneratingStories ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                <p className="muted-copy mt-2 text-sm">
+                  Stories now use the server-side Moonshot / Kimi key from your environment variables.
+                </p>
+                <p className="muted-copy mt-4 text-sm">
+                  Story Time is now generated automatically after Cards, Spelling, Sentence Cloze, and Vocabulary in Context.
+                </p>
+                <div className="primary-button mt-4 w-full justify-center">
+                  {isGeneratingStory ? (
+                    <>
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Building Story 1
+                    </>
                   ) : (
                     <>
                       <Sparkles size={18} />
-                      Generate stories
+                      Story generation queued
                     </>
                   )}
-                </button>
+                </div>
+                {moduleGenerationError ? (
+                  <p className="mt-3 text-sm font-semibold text-rose-300">{moduleGenerationError}</p>
+                ) : null}
               </div>
             </div>
           </section>
@@ -116,7 +120,9 @@ export default function ReadingModule({
             <p className="eyebrow">Story Time</p>
             <h2 className="text-4xl font-semibold">No story is ready yet</h2>
             <p className="module-subcopy mx-auto mt-4 max-w-2xl">
-              Enter your DeepSeek API key, set the number of stories, then click Generate.
+              {isGeneratingStory
+                ? 'The app is building Story Time automatically in the background. The first story will appear here as soon as it is ready.'
+                : 'Story Time will appear here automatically after the earlier modules finish generating.'}
             </p>
           </div>
         </section>
@@ -180,11 +186,14 @@ export default function ReadingModule({
 
     if (scoredArticles.includes(currentArticleIndex)) return;
 
-    const mistakes = article.blanks.reduce((count, blank) => {
+    const mistakes = playableBlanks.reduce((count, blank) => {
       return answers[blank.id] === blank.answer ? count : count + 1;
     }, 0);
+    const incorrectWords = playableBlanks
+      .filter((blank) => answers[blank.id] !== blank.answer)
+      .map((blank) => blank.answer);
 
-    onArticleScored?.(currentArticleIndex, mistakes);
+    onArticleScored?.(currentArticleIndex, mistakes, incorrectWords);
     setScoredArticles((current) => [...current, currentArticleIndex]);
   };
 
@@ -224,53 +233,35 @@ export default function ReadingModule({
 
             <div className="mt-6 rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
               <label className="field-label">
-                <Key size={16} />
-                DeepSeek Story Key
+                <ShieldCheck size={16} />
+                Story generation
               </label>
-              <input
-                type="password"
-                value={storyApiKey}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setStoryApiKey(value);
-                  localStorage.setItem('deepseek_story_api_key', value);
-                }}
-                placeholder="sk-..."
-                className="studio-input"
-              />
-              <div className="mt-4">
-                <label className="field-label">
-                  <ChevronRight size={16} />
-                  Story count
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max={Math.max(1, data.words.length)}
-                  value={storyCount}
-                  onChange={(event) => setStoryCount(Math.max(1, Number(event.target.value) || 1))}
-                  className="studio-input"
-                />
-                <p className="muted-copy mt-2 text-sm">
-                  About {Math.max(1, Math.floor(data.words.length / Math.max(1, storyCount)))} blanks per story
-                  ({data.words.length} words total divided across {storyCount} stories)
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onRegenerateStories?.(storyApiKey, storyCount)}
-                disabled={!storyApiKey.trim() || !onRegenerateStories || !!isRegeneratingStories}
-                className="primary-button mt-4 w-full"
-              >
-                {isRegeneratingStories ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <p className="muted-copy mt-2 text-sm">
+                Stories now use the server-side Moonshot / Kimi key from your environment variables.
+              </p>
+              <p className="muted-copy mt-4 text-sm">
+                {isGeneratingStory
+                  ? `Building Story ${Math.min(data.articles.length + 1, expectedStoryCount || data.articles.length + 1)} automatically now.`
+                  : remainingStoryWords.length > 0
+                    ? `${data.articles.length}/${expectedStoryCount || data.articles.length} stories are ready. More stories will keep using unused words automatically until the set is complete.`
+                    : 'All of today’s words have already been used in stories.'}
+              </p>
+              <div className="primary-button mt-4 w-full justify-center">
+                {isGeneratingStory ? (
+                  <>
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Auto-generating stories
+                  </>
                 ) : (
                   <>
                     <Sparkles size={18} />
-                    Regenerate stories only
+                    Story generation stays automatic
                   </>
                 )}
-              </button>
+              </div>
+              {moduleGenerationError ? (
+                <p className="mt-3 text-sm font-semibold text-rose-300">{moduleGenerationError}</p>
+              ) : null}
             </div>
           </div>
         </section>
@@ -315,12 +306,17 @@ export default function ReadingModule({
             <div className="mt-5 space-y-4">
               {article.blanks.map((blank, index) => {
                 const userAnswer = answers[blank.id];
-                const isCorrect = userAnswer === blank.answer;
+                const isUsedInStory = usedBlankIds.has(blank.id);
+                const isCorrect = isUsedInStory && userAnswer === blank.answer;
                 return (
                   <div
                     key={blank.id}
                     className={`rounded-[24px] border px-5 py-4 ${
-                      isCorrect ? 'border-emerald-400/40 bg-emerald-900/40' : 'border-rose-400/40 bg-rose-900/40'
+                      !isUsedInStory
+                        ? 'border-white/20 bg-white/[0.08]'
+                        : isCorrect
+                          ? 'border-emerald-400/40 bg-emerald-900/40'
+                          : 'border-rose-400/40 bg-rose-900/40'
                     }`}
                   >
                     <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -328,7 +324,12 @@ export default function ReadingModule({
                         Blank {index + 1}
                       </span>
                       <span className="rounded-full bg-white/20 px-3 py-1 text-sm font-bold text-white">{blank.answer}</span>
-                      {!isCorrect && userAnswer ? (
+                      {!isUsedInStory ? (
+                        <span className="rounded-full bg-white/15 px-3 py-1 text-sm font-bold text-white/70">
+                          Not counted
+                        </span>
+                      ) : null}
+                      {isUsedInStory && !isCorrect && userAnswer ? (
                         <span className="rounded-full bg-rose-500/30 px-3 py-1 text-sm font-bold text-rose-300 line-through">
                           {userAnswer}
                         </span>

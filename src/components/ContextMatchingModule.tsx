@@ -1,314 +1,247 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle, ChevronRight, RotateCcw, Star } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, ChevronRight, RotateCcw, Sparkles, XCircle } from 'lucide-react';
 import { LearningData } from '../types';
-
-interface MemoryCard {
-  id: string;
-  pairId: string;
-  kind: 'word' | 'definition';
-  content: string;
-}
-
-const MAX_CARDS_PER_ROUND = 12;
-const WORDS_PER_ROUND = Math.floor(MAX_CARDS_PER_ROUND / 2);
-
-const shuffleCards = (cards: MemoryCard[]) => [...cards].sort(() => Math.random() - 0.5);
 
 export default function ContextMatchingModule({
   data,
   onComplete,
 }: {
   data: LearningData;
-  onComplete?: () => void;
+  onComplete?: (mistakes: number) => void;
 }) {
-  const rounds = useMemo(() => {
-    const chunks = [];
-    for (let index = 0; index < data.words.length; index += WORDS_PER_ROUND) {
-      chunks.push(data.words.slice(index, index + WORDS_PER_ROUND));
+  const questions = data.sentenceClozeQuestions;
+  const [questionQueue, setQuestionQueue] = useState<number[]>(questions.map((_, index) => index));
+  const [solvedCount, setSolvedCount] = useState(0);
+  const [selectedOption, setSelectedOption] = useState('');
+  const [checked, setChecked] = useState(false);
+  const [mistakeCount, setMistakeCount] = useState(0);
+  const [isFinished, setIsFinished] = useState(false);
+  const completionSentRef = useRef(false);
+  const mistakenQuestionIdsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    setQuestionQueue(questions.map((_, index) => index));
+    setSolvedCount(0);
+    setSelectedOption('');
+    setChecked(false);
+    setMistakeCount(0);
+    setIsFinished(false);
+    completionSentRef.current = false;
+    mistakenQuestionIdsRef.current = new Set();
+  }, [data, questions]);
+
+  const currentQuestionIndex = questionQueue[0];
+  const currentQuestion = currentQuestionIndex !== undefined ? questions[currentQuestionIndex] : null;
+  const isCorrect = checked && selectedOption === currentQuestion?.answer;
+  const progress = questions.length > 0 ? ((isFinished ? questions.length : solvedCount) / questions.length) * 100 : 0;
+
+  const completeQuiz = (finalMistakes: number) => {
+    setIsFinished(true);
+    if (!completionSentRef.current) {
+      completionSentRef.current = true;
+      onComplete?.(finalMistakes);
     }
-    return chunks;
-  }, [data.words]);
-
-  const [roundIndex, setRoundIndex] = useState(0);
-
-  const baseDeck = useMemo(() => {
-    const roundWords = rounds[roundIndex] ?? [];
-    const cards = roundWords.flatMap((word, index) => [
-      {
-        id: `round-${roundIndex}-word-${index}`,
-        pairId: `round-${roundIndex}-pair-${index}`,
-        kind: 'word' as const,
-        content: word.word,
-      },
-      {
-        id: `round-${roundIndex}-definition-${index}`,
-        pairId: `round-${roundIndex}-pair-${index}`,
-        kind: 'definition' as const,
-        content: word.definition,
-      },
-    ]);
-
-    return shuffleCards(cards);
-  }, [roundIndex, rounds]);
-
-  const [deck, setDeck] = useState<MemoryCard[]>(baseDeck);
-  const [flippedIds, setFlippedIds] = useState<string[]>([]);
-  const [matchedIds, setMatchedIds] = useState<string[]>([]);
-  const [turns, setTurns] = useState(0);
-  const [lockBoard, setLockBoard] = useState(false);
-  const [roundTurns, setRoundTurns] = useState<number[]>([]);
-  const rewardSent = useRef(false);
-
-  useEffect(() => {
-    setRoundIndex(0);
-    setRoundTurns([]);
-    rewardSent.current = false;
-  }, [data]);
-
-  useEffect(() => {
-    setDeck(baseDeck);
-    setFlippedIds([]);
-    setMatchedIds([]);
-    setTurns(0);
-    setLockBoard(false);
-  }, [baseDeck]);
-
-  const currentRoundWords = rounds[roundIndex] ?? [];
-  const matchedCount = matchedIds.length / 2;
-  const isRoundFinished = currentRoundWords.length > 0 && matchedCount === currentRoundWords.length;
-  const isAllFinished = isRoundFinished && roundIndex === rounds.length - 1;
-  const cardCount = deck.length;
-
-  const boardColumns = (() => {
-    if (cardCount <= 4) return 2;
-    if (cardCount <= 6) return 3;
-    if (cardCount <= 8) return 4;
-    if (cardCount <= 10) return 4;
-    if (cardCount <= 12) return 4;
-    if (cardCount <= 16) return 4;
-    return 5;
-  })();
-
-  const boardRows = Math.ceil(cardCount / boardColumns);
-  const boardHeight = boardRows <= 2 ? 620 : boardRows === 3 ? 760 : 880;
-
-  const handleRestartRound = () => {
-    setDeck(shuffleCards(baseDeck));
-    setFlippedIds([]);
-    setMatchedIds([]);
-    setTurns(0);
-    setLockBoard(false);
   };
 
-  const handleNextRound = () => {
-    setRoundTurns((current) => {
-      const next = [...current];
-      next[roundIndex] = turns;
-      return next;
-    });
-    setRoundIndex((index) => Math.min(index + 1, rounds.length - 1));
+  const handleCheck = () => {
+    if (!currentQuestion || !selectedOption || checked) return;
+
+    if (selectedOption !== currentQuestion.answer && !mistakenQuestionIdsRef.current.has(currentQuestion.id)) {
+      mistakenQuestionIdsRef.current.add(currentQuestion.id);
+      setMistakeCount(mistakenQuestionIdsRef.current.size);
+    }
+
+    setChecked(true);
   };
 
-  const handleRestartAll = () => {
-    setRoundTurns([]);
-    setRoundIndex(0);
-    setDeck(shuffleCards(rounds[0]?.flatMap((word, index) => [
-      { id: `round-0-word-${index}`, pairId: `round-0-pair-${index}`, kind: 'word' as const, content: word.word },
-      {
-        id: `round-0-definition-${index}`,
-        pairId: `round-0-pair-${index}`,
-        kind: 'definition' as const,
-        content: word.definition,
-      },
-    ]) ?? []));
-    setFlippedIds([]);
-    setMatchedIds([]);
-    setTurns(0);
-    setLockBoard(false);
-  };
+  const handleNext = () => {
+    if (!currentQuestion || !checked) return;
 
-  const handleFlip = (cardId: string) => {
-    if (lockBoard || flippedIds.includes(cardId) || matchedIds.includes(cardId) || isRoundFinished) return;
+    if (isCorrect) {
+      const nextQueue = questionQueue.slice(1);
+      const nextSolvedCount = solvedCount + 1;
 
-    const nextFlipped = [...flippedIds, cardId];
-    setFlippedIds(nextFlipped);
-
-    if (nextFlipped.length < 2) return;
-
-    setLockBoard(true);
-    setTurns((count) => count + 1);
-
-    const [firstId, secondId] = nextFlipped;
-    const firstCard = deck.find((card) => card.id === firstId);
-    const secondCard = deck.find((card) => card.id === secondId);
-    const isMatch =
-      firstCard &&
-      secondCard &&
-      firstCard.pairId === secondCard.pairId &&
-      firstCard.kind !== secondCard.kind;
-
-    window.setTimeout(() => {
-      if (isMatch) {
-        setMatchedIds((current) => [...current, firstId, secondId]);
+      setSolvedCount(nextSolvedCount);
+      if (nextQueue.length === 0) {
+        completeQuiz(mistakenQuestionIdsRef.current.size);
+      } else {
+        setQuestionQueue(nextQueue);
       }
-      setFlippedIds([]);
-      setLockBoard(false);
-    }, isMatch ? 520 : 920);
+    } else {
+      const [currentIndexInQueue, ...remainingQueue] = questionQueue;
+      if (currentIndexInQueue !== undefined) {
+        setQuestionQueue([...remainingQueue, currentIndexInQueue]);
+      }
+    }
+
+    setSelectedOption('');
+    setChecked(false);
   };
 
-  useEffect(() => {
-    if (isAllFinished && !rewardSent.current) {
-      rewardSent.current = true;
-      onComplete?.();
-    }
-  }, [isAllFinished, onComplete]);
+  const handleRestart = () => {
+    setQuestionQueue(questions.map((_, index) => index));
+    setSolvedCount(0);
+    setSelectedOption('');
+    setChecked(false);
+    setMistakeCount(0);
+    setIsFinished(false);
+    completionSentRef.current = false;
+    mistakenQuestionIdsRef.current = new Set();
+  };
 
-  if (isAllFinished) {
+  if (questions.length === 0) {
+    return (
+      <div className="studio-card">
+        <div className="module-header">
+          <div>
+            <span className="module-pill">Sentence Cloze</span>
+            <h2 className="mt-4 text-4xl font-semibold">No exam questions yet</h2>
+            <p className="module-subcopy mt-3">
+              Generate a word set first, and this module will prepare Singapore-style sentence cloze questions.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isFinished) {
+    const cleanFirstTimeCount = questions.length - mistakeCount;
+
     return (
       <div className="celebration-panel studio-card">
         <div className="celebration-badge">
-          <Star size={42} />
+          <Sparkles size={42} />
         </div>
-        <h2 className="text-5xl font-semibold">You finished every matching round</h2>
+        <h2 className="text-5xl font-semibold">Sentence Cloze complete</h2>
         <p className="module-subcopy mx-auto mt-4 max-w-2xl">
-          You matched all word and definition pairs across every round. Nice memory work.
+          You kept working through the wrong ones until every sentence was correct. Nice steady exam practice.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm font-bold text-slate-500">
-          {roundTurns.map((roundTurn, index) => (
-            <span key={index} className="rounded-full bg-white px-4 py-2">
-              Round {index + 1}: {roundTurn} turns
-            </span>
-          ))}
-          <span className="rounded-full bg-white px-4 py-2">Round {roundIndex + 1}: {turns} turns</span>
+          <span className="rounded-full bg-white px-4 py-2">Solved {questions.length}</span>
+          <span className="rounded-full bg-white px-4 py-2">Clean first try {cleanFirstTimeCount}</span>
+          <span className="rounded-full bg-white px-4 py-2">Needed retry {mistakeCount}</span>
         </div>
-        <button type="button" onClick={handleRestartAll} className="primary-button mx-auto mt-8">
+        <button type="button" onClick={handleRestart} className="primary-button mx-auto mt-8">
           <RotateCcw size={18} />
-          Play all rounds again
+          Try the questions again
         </button>
       </div>
     );
   }
 
+  if (!currentQuestion) return null;
+
   return (
-    <div className="grid gap-5 lg:grid-cols-[0.54fr_1.46fr]">
+    <div className="grid gap-5 lg:grid-cols-[0.56fr_1.44fr]">
       <aside className="studio-card">
         <div className="module-header">
           <div>
-            <span className="module-pill">Memory matching</span>
-            <h2 className="mt-4 text-4xl font-semibold">Flip two cards and find the pair</h2>
+            <span className="module-pill">Sentence Cloze</span>
+            <h2 className="mt-4 text-4xl font-semibold">Choose the best word for the blank</h2>
             <p className="module-subcopy mt-3">
-              Each round shows fewer words, so the cards stay large, clear, and easy to tap.
+              These are fresh exam-style questions, and any wrong sentence will come back again until it is solved.
             </p>
           </div>
         </div>
 
         <div className="progress-strip">
-          <strong>Round {roundIndex + 1}</strong>
-          <span className="text-sm font-semibold text-slate-500">{rounds.length} rounds total</span>
+          <strong>Solved {solvedCount}</strong>
+          <span className="text-sm font-semibold text-slate-500">{questions.length} total</span>
         </div>
         <div className="progress-bar">
-          <div className="progress-value" style={{ width: `${((roundIndex + (isRoundFinished ? 1 : 0)) / rounds.length) * 100}%` }} />
+          <div className="progress-value" style={{ width: `${progress}%` }} />
         </div>
 
         <div className="mt-8 grid gap-4">
           <div className="studio-panel">
-            <p className="eyebrow">Pairs found</p>
-            <p className="text-3xl font-semibold">
-              {matchedCount} / {currentRoundWords.length}
-            </p>
+            <p className="eyebrow">Need retry</p>
+            <p className="text-3xl font-semibold">{mistakeCount}</p>
           </div>
           <div className="studio-panel">
-            <p className="eyebrow">Turns</p>
-            <p className="text-3xl font-semibold">{turns}</p>
+            <p className="eyebrow">Target word</p>
+            <p className="text-xl font-semibold text-[#d28a43]">{currentQuestion.targetWord}</p>
           </div>
           <div className="studio-panel">
             <p className="eyebrow">Tip</p>
-            <p className="muted-copy">Try remembering where the long definition cards are before chasing the matching word cards.</p>
+            <p className="muted-copy">Read the whole sentence first, then pick the word that sounds most natural in context.</p>
           </div>
-        </div>
-
-        <div className="mt-6 flex gap-3">
-          <button type="button" onClick={handleRestartRound} className="secondary-button flex-1">
-            <RotateCcw size={18} />
-            Restart round
-          </button>
-          {isRoundFinished && roundIndex < rounds.length - 1 ? (
-            <button type="button" onClick={handleNextRound} className="primary-button flex-1">
-              Next round
-              <ChevronRight size={18} />
-            </button>
-          ) : null}
         </div>
       </aside>
 
-      <section className="studio-card flex flex-col">
-        <div className="mb-5 flex items-center justify-between gap-4">
+      <section className="studio-card">
+        <div className="module-header">
           <div>
-            <p className="eyebrow">Board</p>
-            <h3 className="text-3xl font-semibold">Round {roundIndex + 1} matching game</h3>
-          </div>
-          <div className="module-pill">
-            <CheckCircle size={14} />
-            {matchedCount} solved
+            <span className="module-pill">Current challenge</span>
+            <h3 className="mt-4 text-4xl font-semibold leading-tight">{currentQuestion.sentence}</h3>
           </div>
         </div>
 
-        <div
-          className="grid flex-1 gap-4"
-          style={{
-            gridTemplateColumns: `repeat(${boardColumns}, minmax(0, 1fr))`,
-            gridTemplateRows: `repeat(${boardRows}, minmax(0, 1fr))`,
-            minHeight: `${boardHeight}px`,
-          }}
-        >
-          {deck.map((card) => {
-            const isMatched = matchedIds.includes(card.id);
-            const isFlipped = flippedIds.includes(card.id) || isMatched;
+        <div className="mt-8 grid gap-4 md:grid-cols-2">
+          {currentQuestion.options.map((option) => {
+            const isSelected = selectedOption === option;
+            const showCorrect = checked && option === currentQuestion.answer;
+            const showWrong = checked && isSelected && option !== currentQuestion.answer;
 
             return (
               <button
-                key={card.id}
+                key={option}
                 type="button"
-                onClick={() => handleFlip(card.id)}
-                disabled={isMatched || lockBoard || isRoundFinished}
-                className="perspective-1000 h-full min-h-[190px] w-full text-left"
+                disabled={checked}
+                onClick={() => setSelectedOption(option)}
+                className={`rounded-[28px] border px-6 py-5 text-left text-xl font-semibold transition-all ${
+                  showCorrect
+                    ? 'border-emerald-400 bg-[linear-gradient(180deg,rgba(202,255,239,0.96),rgba(134,235,198,0.92))] text-emerald-950'
+                    : showWrong
+                      ? 'border-rose-300 bg-[linear-gradient(180deg,rgba(255,236,244,0.98),rgba(255,214,228,0.94))] text-rose-900'
+                      : isSelected
+                        ? 'border-[#f48fb1] bg-[linear-gradient(180deg,rgba(255,247,252,0.98),rgba(255,231,246,0.92))] text-[#9f658c] shadow-[0_12px_24px_rgba(244,195,220,0.24)]'
+                        : 'border-[rgba(209,174,214,0.35)] bg-white/75 text-[#9f658c] hover:border-[#f4a1c6] hover:bg-[#fff7fb]'
+                }`}
               >
-                <div
-                  className={`relative h-full w-full transition-transform duration-500 [transform-style:preserve-3d] ${
-                    isFlipped ? '[transform:rotateY(180deg)]' : ''
-                  }`}
-                >
-                  <div className="absolute inset-0 rounded-[28px] border border-[rgba(209,174,214,0.35)] bg-[linear-gradient(145deg,rgba(255,129,181,0.16),rgba(223,242,255,0.24))] p-5 shadow-[var(--shadow-md)] [backface-visibility:hidden]">
-                    <p className="eyebrow">Magic card</p>
-                    <div className="mt-5 flex h-[calc(100%-1.6rem)] items-center justify-center rounded-[22px] border border-white/55 bg-white/58 text-center text-4xl font-extrabold text-[var(--berry)]">
-                      ?
-                    </div>
-                  </div>
-
-                  <div
-                    className={`absolute inset-0 rounded-[28px] p-5 text-left shadow-[var(--shadow-md)] [backface-visibility:hidden] [transform:rotateY(180deg)] ${
-                      card.kind === 'word'
-                        ? 'border border-[rgba(114,181,255,0.24)] bg-[linear-gradient(145deg,rgba(223,242,255,0.98),rgba(255,255,255,0.95))] text-[#5d6ed2]'
-                        : 'border border-[rgba(255,129,181,0.22)] bg-[linear-gradient(145deg,rgba(255,247,252,0.98),rgba(255,231,246,0.92))] text-slate-700'
-                    } ${isMatched ? 'ring-2 ring-[#67c8b7]/70' : ''}`}
-                  >
-                    <p className="eyebrow">{card.kind === 'word' ? 'Word' : 'Meaning'}</p>
-                    <div className="mt-3 flex h-[calc(100%-1.4rem)] items-center">
-                      <p
-                        className={`w-full ${
-                          card.kind === 'word'
-                            ? 'text-3xl font-extrabold'
-                            : 'text-lg leading-8 font-bold md:text-xl md:leading-9'
-                        }`}
-                      >
-                        {card.content}
-                      </p>
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span>{option}</span>
+                  {showCorrect ? <CheckCircle2 size={22} /> : null}
+                  {showWrong ? <XCircle size={22} /> : null}
                 </div>
               </button>
             );
           })}
+        </div>
+
+        {checked ? (
+          <div
+            className={`mt-6 rounded-[28px] border px-6 py-5 ${
+              isCorrect
+                ? 'border-emerald-300 bg-[linear-gradient(180deg,rgba(233,255,247,0.98),rgba(214,250,236,0.94))]'
+                : 'border-rose-200 bg-[linear-gradient(180deg,rgba(255,244,248,0.98),rgba(255,228,238,0.94))]'
+            }`}
+          >
+            <p className="eyebrow">{isCorrect ? 'Correct' : 'This one will come back later'}</p>
+            {!isCorrect ? (
+              <p className="mt-2 text-xl font-semibold text-[#9f658c]">
+                The best answer is <span className="text-[#b3477d]">{currentQuestion.answer}</span>.
+              </p>
+            ) : null}
+            <p className="mt-3 text-lg leading-8 text-[#8f6488]">{currentQuestion.explanation}</p>
+          </div>
+        ) : null}
+
+        <div className="mt-8 flex items-center justify-between gap-4">
+          <button type="button" onClick={handleRestart} className="ghost-button">
+            <RotateCcw size={18} />
+            Restart
+          </button>
+          {!checked ? (
+            <button type="button" onClick={handleCheck} disabled={!selectedOption} className="primary-button">
+              Check answer
+            </button>
+          ) : (
+            <button type="button" onClick={handleNext} className="primary-button">
+              {isCorrect ? 'Next question' : 'Try a different one'}
+              <ChevronRight size={18} />
+            </button>
+          )}
         </div>
       </section>
     </div>

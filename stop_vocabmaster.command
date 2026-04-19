@@ -1,9 +1,9 @@
 #!/bin/zsh
 
-cd "/Users/rachel/Documents/我 iPad 上的文件/软件与项目/项目文件/vocabmaster" || exit 1
+cd "/Users/rachel/Documents/我 iPad 上的文件/软件与项目/项目文件/Lydia vocabmaster" || exit 1
 
 PID_FILE=".vocabmaster-dev.pid"
-ports=(3000 3001 3002 3003 3004 3005 3006 3007 3008 3009 3010)
+ports=(47821)
 
 found=0
 
@@ -27,7 +27,7 @@ for port in "${ports[@]}"; do
 done
 
 if [ $found -eq 0 ]; then
-  echo "No local VocabMaster server was found on ports 3000-3010."
+  echo "No local VocabMaster server was found on port 47821."
 else
   echo "VocabMaster local server stopped."
 fi

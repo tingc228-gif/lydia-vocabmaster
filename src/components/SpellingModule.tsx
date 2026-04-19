@@ -19,6 +19,7 @@ export default function SpellingModule({
   const [currentTurn, setCurrentTurn] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const usedAnyHintRef = useRef(false);
+  const isResolvingTurnRef = useRef(false);
 
   const currentWordIndex = queue[0];
   const currentWord = currentWordIndex !== undefined ? data.words[currentWordIndex] : null;
@@ -26,6 +27,7 @@ export default function SpellingModule({
   useEffect(() => {
     if (!currentWord || isFinished) return;
 
+    isResolvingTurnRef.current = false;
     setInput('');
     setHintsShown(0);
     setIsCorrect(false);
@@ -48,22 +50,33 @@ export default function SpellingModule({
   }, [isCorrect]);
 
   const handleCorrect = (usedHint: boolean) => {
+    if (isResolvingTurnRef.current) return;
+
+    isResolvingTurnRef.current = true;
     setIsCorrect(true);
 
     setTimeout(() => {
+      const isLastWord = queue.length === 1;
+
+      if (!usedHint) {
+        setMasteredCount((count) => count + 1);
+      }
+
       setQueue((previousQueue) => {
         const newQueue = [...previousQueue];
         const finishedIndex = newQueue.shift();
 
-        if (finishedIndex !== undefined) {
-          if (usedHint) newQueue.push(finishedIndex);
-          else setMasteredCount((count) => count + 1);
+        if (finishedIndex !== undefined && usedHint) {
+          newQueue.push(finishedIndex);
         }
 
-        if (newQueue.length === 0) setIsFinished(true);
         return newQueue;
       });
-      if (queue.length === 1) {
+
+      if (isLastWord) {
+        setIsFinished(true);
+      }
+      if (isLastWord) {
         onComplete?.(usedAnyHintRef.current || usedHint);
       }
       setCurrentTurn((turn) => turn + 1);
@@ -100,6 +113,7 @@ export default function SpellingModule({
     setQueue(data.words.map((_, index) => index));
     setMasteredCount(0);
     setIsFinished(false);
+    isResolvingTurnRef.current = false;
     usedAnyHintRef.current = false;
     setCurrentTurn((turn) => turn + 1);
   };

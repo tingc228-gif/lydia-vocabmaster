@@ -1,25 +1,71 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpenText, Key, Sparkles, Stars } from 'lucide-react';
+import { BookOpenText, LoaderCircle, RefreshCcw, ShieldCheck, Sparkles, Stars } from 'lucide-react';
+import { loadTodayWordsFromNotion, NotionTodayWord } from '../services/notion';
+
+const INPUT_TEXT_STORAGE_KEY = 'vocabmaster_input_text_v1';
+const LOADED_NOTION_TEXT_STORAGE_KEY = 'vocabmaster_loaded_notion_text_v1';
+
+function readStoredValue(key: string) {
+  if (typeof window === 'undefined') return '';
+
+  try {
+    return window.localStorage.getItem(key) || '';
+  } catch {
+    return '';
+  }
+}
 
 export default function InputModule({
   onGenerate,
   isLoading,
+  onNotionWordsLoaded,
+  onNotionBatchInvalidated,
 }: {
-  onGenerate: (apiKey: string, text: string) => void;
+  onGenerate: (text: string) => void;
   isLoading: boolean;
+  onNotionWordsLoaded?: (items: NotionTodayWord[], wordsText: string) => void;
+  onNotionBatchInvalidated?: () => void;
 }) {
-  const [apiKey, setApiKey] = useState('');
-  const [text, setText] = useState('');
+  const [text, setText] = useState(() => readStoredValue(INPUT_TEXT_STORAGE_KEY));
+  const [isLoadingNotion, setIsLoadingNotion] = useState(false);
+  const [notionStatus, setNotionStatus] = useState('');
+  const [loadedNotionWordsText, setLoadedNotionWordsText] = useState(() => readStoredValue(LOADED_NOTION_TEXT_STORAGE_KEY));
 
   useEffect(() => {
-    const savedKey = localStorage.getItem('kimi_api_key');
-    if (savedKey) setApiKey(savedKey);
-  }, []);
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(INPUT_TEXT_STORAGE_KEY, text);
+    } catch {
+      // Ignore storage write issues and keep the current session usable.
+    }
+  }, [text]);
 
-  const handleSaveKey = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setApiKey(value);
-    localStorage.setItem('kimi_api_key', value);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(LOADED_NOTION_TEXT_STORAGE_KEY, loadedNotionWordsText);
+    } catch {
+      // Ignore storage write issues and keep the current session usable.
+    }
+  }, [loadedNotionWordsText]);
+
+  const handleLoadTodayWords = async () => {
+    setIsLoadingNotion(true);
+    setNotionStatus('');
+
+    try {
+      const data = await loadTodayWordsFromNotion();
+      setText(data.wordsText);
+      setLoadedNotionWordsText(data.wordsText);
+      onNotionWordsLoaded?.(data.items, data.wordsText);
+      setNotionStatus(`Loaded ${data.count} words from Notion for ${data.date}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      setNotionStatus(message);
+      alert(`Error loading today's Notion words.\n\n${message}`);
+    } finally {
+      setIsLoadingNotion(false);
+    }
   };
 
   return (
@@ -33,19 +79,51 @@ export default function InputModule({
             </span>
             <h2 className="mt-4 text-4xl font-semibold">Make a magical little word garden</h2>
             <p className="module-subcopy mt-3 max-w-2xl">
-              Add your words and VocabMaster will turn them into cute cards, spelling play, and story adventures.
+              Add your words once, then VocabMaster will generate every module in the background from Cards all the way to Story Time.
             </p>
           </div>
         </div>
 
         <div className="grid gap-5">
-          <div>
+          <div className="rounded-[24px] border border-emerald-200/60 bg-emerald-50 px-5 py-4 text-emerald-900">
             <label className="field-label">
-              <Key size={18} />
-              Kimi API Key
+              <ShieldCheck size={18} />
+              API security
             </label>
-            <input type="password" value={apiKey} onChange={handleSaveKey} placeholder="sk-..." className="studio-input" />
-            <p className="muted-copy mt-3 text-sm">Your Kimi key is used only for Setup. Reading Lab uses a separate DeepSeek key and both stay saved in this browser only.</p>
+            <p className="mt-2 text-sm leading-6">
+              This copy uses server-side Vercel environment variables for AI requests. No model API key is entered or stored in the browser.
+            </p>
+          </div>
+
+          <div className="rounded-[24px] border border-sky-200/70 bg-sky-50 px-5 py-4 text-sky-950">
+            <label className="field-label">
+              <RefreshCcw size={18} />
+              A2 Key 2020 单词库同步
+            </label>
+            <p className="mt-2 text-sm leading-6">
+              从 A2 Key 2020 单词数据库提取今天要复习的单词，并自动放进下面的单词列表。
+            </p>
+            <button
+              type="button"
+              onClick={handleLoadTodayWords}
+              disabled={isLoadingNotion}
+              className="secondary-button mt-4"
+            >
+              {isLoadingNotion ? (
+                <>
+                  <LoaderCircle size={18} className="animate-spin" />
+                  Loading from A2 Key 2020
+                </>
+              ) : (
+                <>
+                  <RefreshCcw size={18} />
+                  Load today&apos;s A2 Key 2020 words
+                </>
+              )}
+            </button>
+            {notionStatus ? (
+              <p className="mt-3 text-sm leading-6 text-sky-900">{notionStatus}</p>
+            ) : null}
           </div>
 
           <div className="scroll-field">
@@ -61,24 +139,35 @@ export default function InputModule({
                 className="studio-textarea parchment-textarea"
                 placeholder="brave — showing courage&#10;sparkle — shine brightly&#10;whisper — speak softly"
                 value={text}
-                onChange={(event) => setText(event.target.value)}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setText(nextValue);
+                  if (loadedNotionWordsText && nextValue !== loadedNotionWordsText) {
+                    setLoadedNotionWordsText('');
+                    onNotionBatchInvalidated?.();
+                    setNotionStatus('Notion batch disconnected because the word list was edited manually.');
+                  }
+                }}
               />
             </div>
-            <p className="muted-copy mt-3 text-sm">Paste words on separate lines, with commas, or as word and meaning notes.</p>
+            <p className="muted-copy mt-3 text-sm">Paste words on separate lines, with commas, or load today&apos;s review list from A2 Key 2020 单词数据库.</p>
           </div>
 
           <button
             type="button"
-            onClick={() => onGenerate(apiKey, text)}
-            disabled={isLoading || !text.trim() || !apiKey.trim()}
+            onClick={() => onGenerate(text)}
+            disabled={isLoading || !text.trim()}
             className="primary-button w-full text-lg"
           >
             {isLoading ? (
-              <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              <>
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Generating modules
+              </>
             ) : (
               <>
                 <Sparkles size={20} />
-                Start my word garden
+                Generate all modules
               </>
             )}
           </button>
@@ -102,8 +191,8 @@ export default function InputModule({
           </div>
           <div className="mt-6 grid gap-3 text-sm font-semibold text-slate-700">
             <div className="studio-panel">1. Pick words on the parchment scroll</div>
-            <div className="studio-panel">2. Flip cards and spell sweet little words</div>
-            <div className="studio-panel">3. Open Story Time for magical reading play</div>
+            <div className="studio-panel">2. Tap once to generate all modules in order</div>
+            <div className="studio-panel">3. Cards open first while Story Time finishes in the background</div>
           </div>
         </section>
 
@@ -134,7 +223,7 @@ export default function InputModule({
               <p className="eyebrow">Reading lab note</p>
               <h3 className="text-2xl font-semibold">Stories are made in Story Time</h3>
               <p className="muted-copy mt-2">
-                Setup makes the word set with Kimi. Open Story Time to make stories separately with DeepSeek.
+                Setup now queues Cards, Spelling, Sentence Cloze, Vocabulary in Context, and Story Time automatically with the server-side Moonshot / Kimi key.
               </p>
             </div>
           </div>
@@ -144,7 +233,7 @@ export default function InputModule({
           <p className="eyebrow">Starlight cheer</p>
           <div className="cheer-strip">
             <span aria-hidden="true">🧚</span>
-            <p>Every finished module adds egg coins and a little sparkle to your garden.</p>
+            <p>Every finished module helps your kitten grow while the rest of the word garden keeps building.</p>
             <Stars size={18} />
           </div>
         </section>

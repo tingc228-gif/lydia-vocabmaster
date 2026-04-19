@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local Netlify folder
+.netlify
+.netlify-config
+
+# Local Vercel folder
+.vercel

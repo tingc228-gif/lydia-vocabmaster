@@ -933,7 +933,7 @@ export default function App() {
                 onNotionBatchInvalidated={() => {
                   setActiveNotionBatch([]);
                   setStoryIncorrectWords([]);
-                  setReviewSyncStatus('Notion sync paused because the loaded 20-word batch was edited manually.');
+                  setReviewSyncStatus('Notion sync paused because the loaded Notion batch was edited manually.');
                   setReviewSynced(false);
                 }}
               />

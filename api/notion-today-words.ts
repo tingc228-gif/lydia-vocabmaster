@@ -47,7 +47,7 @@ export default async function handler(request: Request) {
 
   try {
     const sortedResponse = await queryNotionDataSource({
-      page_size: 20,
+      page_size: 10,
       filter: {
         property: PROPERTY_LEVEL,
         select: {
@@ -65,7 +65,7 @@ export default async function handler(request: Request) {
     const items = (sortedResponse.results || [])
       .map((page) => parseWordPage(page))
       .filter((item): item is NonNullable<typeof item> => Boolean(item))
-      .slice(0, 20);
+      .slice(0, 10);
 
     return new Response(
       JSON.stringify({

@@ -207,7 +207,7 @@ export default function InputModule({
           <div className="helpful-scroll-body">
             <div className="helpful-scroll-pin" aria-hidden="true">⭐</div>
             <ul className="space-y-3 text-sm leading-7 text-slate-600">
-              <li>8 to 20 words is a happy size for one play set.</li>
+              <li>About 10 words is a happy size for one play set.</li>
               <li>Short meanings help cards and games feel extra clear.</li>
               <li>Story Time is the best place to watch words come alive.</li>
             </ul>

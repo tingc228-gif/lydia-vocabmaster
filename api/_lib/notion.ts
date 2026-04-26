@@ -3,6 +3,7 @@ const NOTION_VERSION = process.env.NOTION_API_VERSION || '2025-09-03';
 
 export const PROPERTY_WORD = '单词';
 export const PROPERTY_MEANING = '英文释义';
+export const PROPERTY_CHINESE_MEANING = '中文释义';
 export const PROPERTY_LEVEL = '熟练度';
 export const PROPERTY_NEXT_REVIEW = '下次复习时间';
 export const PROPERTY_LAST_REVIEW = '上次复习时间';
@@ -50,6 +51,7 @@ export function parseWordPage(page: { id?: string; properties?: NotionPropertyMa
   const properties = page.properties || {};
   const word = readPlainText(properties[PROPERTY_WORD]?.title);
   const meaning = readPlainText(properties[PROPERTY_MEANING]?.rich_text);
+  const chineseMeaning = readPlainText(properties[PROPERTY_CHINESE_MEANING]?.rich_text);
   const level = properties[PROPERTY_LEVEL]?.select?.name || '';
   const nextReview = properties[PROPERTY_NEXT_REVIEW]?.formula?.date?.start || '';
 
@@ -59,6 +61,7 @@ export function parseWordPage(page: { id?: string; properties?: NotionPropertyMa
     id: page.id || '',
     word,
     meaning,
+    chineseMeaning,
     level,
     nextReview,
   };

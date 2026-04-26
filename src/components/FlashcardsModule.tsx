@@ -15,6 +15,7 @@ export default function FlashcardsModule({ data }: { data: LearningData }) {
   const word = data.words[currentIndex];
   const displayWord = toSentenceCase(word.word);
   const displayDefinition = toSentenceCase(word.definition);
+  const displayChineseDefinition = word.chineseDefinition?.trim() || '';
 
   const next = () => {
     setIsFlipped(false);
@@ -98,6 +99,15 @@ export default function FlashcardsModule({ data }: { data: LearningData }) {
                   <p className="eyebrow">Definition</p>
                   <h3 className="exercise-prompt text-[#b3477d]">{displayDefinition}</h3>
                 </div>
+                {displayChineseDefinition ? (
+                  <>
+                    <div className="h-px bg-[#f6c7de]" />
+                    <div>
+                      <p className="eyebrow">Chinese meaning</p>
+                      <h3 className="exercise-prompt text-[#d28a43]">{displayChineseDefinition}</h3>
+                    </div>
+                  </>
+                ) : null}
                 <div className="h-px bg-[#f6c7de]" />
                 <div>
                   <p className="eyebrow">Example</p>

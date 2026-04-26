@@ -228,6 +228,26 @@ function serializePetSnapshot(petState: Pick<PetState, 'foodPercent' | 'joyPerce
   return JSON.stringify(createPetSnapshot(petState));
 }
 
+function mergeChineseMeaningsIntoLearningData(data: LearningData, notionBatch: NotionTodayWord[]) {
+  if (notionBatch.length === 0) return data;
+
+  const chineseMeaningByWord = new Map(
+    notionBatch
+      .map((item) => [item.word.trim().toLowerCase(), item.chineseMeaning?.trim() || ''] as const)
+      .filter(([, chineseMeaning]) => Boolean(chineseMeaning)),
+  );
+
+  if (chineseMeaningByWord.size === 0) return data;
+
+  return {
+    ...data,
+    words: data.words.map((word) => ({
+      ...word,
+      chineseDefinition: chineseMeaningByWord.get(word.word.trim().toLowerCase()) || word.chineseDefinition || '',
+    })),
+  };
+}
+
 function PetStatusPanel({
   petState,
   onReset,
@@ -672,8 +692,10 @@ export default function App() {
       errorMessage: '',
     });
     try {
-      const data = await generateMaterials(wordsText);
+      const generatedData = await generateMaterials(wordsText);
       if (generationRunIdRef.current !== runId) return;
+
+      const data = mergeChineseMeaningsIntoLearningData(generatedData, activeNotionBatch);
 
       setLearningData(data);
       setRewardState(createDefaultRewardState());

@@ -4,6 +4,7 @@ export interface NotionTodayWord {
   id: string;
   word: string;
   meaning: string;
+  chineseMeaning?: string;
   level: string;
   nextReview: string;
 }

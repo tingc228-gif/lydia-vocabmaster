@@ -3,6 +3,7 @@ export interface WordData {
   synonym: string;
   partOfSpeech: string;
   definition: string;
+  chineseDefinition?: string;
   exampleSentence: string;
   exampleSentenceWithBlank: string;
 }
